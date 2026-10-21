@@ -54,6 +54,7 @@ private:
     QPoint cellAt(const QPointF& position) const;
     bool selected(int row, int col) const;
     void deleteSelectedInput();
+    void clearApplicationCommand();
     Screen* screen_; Appearance appearance_;
     Appearance baseAppearance_; QJsonObject appControls_;
     Screen* processScreen_=nullptr; std::unique_ptr<Screen> aboutScreen_;

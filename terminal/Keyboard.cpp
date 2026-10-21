@@ -1,7 +1,7 @@
 #include "Screen.h"
 namespace terlox {
 void Screen::key(QKeyEvent* e) {
-    if (e->key()==Qt::Key_Return || e->key()==Qt::Key_Enter || (e->key()==Qt::Key_C && e->modifiers().testFlag(Qt::ControlModifier))) editableInput_.clear();
+    if (e->key()==Qt::Key_Return || e->key()==Qt::Key_Enter || ((e->key()==Qt::Key_C || e->key()==Qt::Key_U) && e->modifiers().testFlag(Qt::ControlModifier))) editableInput_.clear();
     int mods = VTERM_MOD_NONE;
     if (e->modifiers() & Qt::ShiftModifier) mods |= VTERM_MOD_SHIFT;
     if (e->modifiers() & Qt::ControlModifier) mods |= VTERM_MOD_CTRL;

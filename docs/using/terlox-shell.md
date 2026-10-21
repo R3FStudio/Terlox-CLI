@@ -93,6 +93,8 @@ end, **Backspace/Delete** to edit, and **Tab** for completion. **Ctrl+C** cancel
 a command; with selected text, Terlox uses it to copy instead. **Ctrl+D** on an
 empty prompt leaves the shell.
 
+Ctrl+U clears the command being edited.
+
 Select command text with the mouse and press Backspace or Delete to remove it.
 Ctrl+A followed by either key clears the current command. The directory prompt
 and previous output remain unchanged even when they are included in the selection.

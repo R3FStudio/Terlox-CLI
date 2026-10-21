@@ -9,6 +9,8 @@ class EditableInput {
 public:
     void update(const QJsonObject& state,int row,int column,int columns,qint64 scrollSerial);
     void clear() { active_=false; }
+    bool active() const { return active_; }
+    bool empty() const { return text_.isEmpty(); }
     std::optional<InputDeletion> selectedRange(QPoint a,QPoint b,int columns,qint64 scrollSerial) const;
 private:
     bool active_=false;

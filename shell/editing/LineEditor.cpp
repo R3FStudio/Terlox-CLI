@@ -79,7 +79,8 @@ std::optional<QString> readLine(History& history) {
         if (c == 13 || c == 10) { finishInputState(); std::cout << "\r\n"; return line; }
         if (c == 4 && line.isEmpty()) { finishInputState(); std::cout << "\r\n"; return {}; }
         if (c == 3) { finishInputState(); std::cout << "^C\r\n"; return QString(); }
-        if (c == -1) { line = history.previous(line); cursor = line.size(); }
+        if (c == 21) { line.clear(); cursor=0; }
+        else if (c == -1) { line = history.previous(line); cursor = line.size(); }
         else if (c == -2) { line = history.next(); cursor = line.size(); }
         else if (c == -3 && cursor > 0) { --cursor; if (cursor > 0 && line[cursor].isLowSurrogate()) --cursor; }
         else if (c == -4 && cursor < line.size()) { if (line[cursor].isHighSurrogate()) ++cursor; ++cursor; }

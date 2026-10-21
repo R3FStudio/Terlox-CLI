@@ -139,7 +139,9 @@ limit is 8192 UTF-16 units.
 `terminal/EditableInput.cpp` maps selections to that region. The view sends Home,
 Right and Delete keys to edit the selected characters in the shell's buffer.
 Prompt text and output outside the region are excluded. An alternate screen,
-Enter or Ctrl+C clears the region. A changed column count disables deletion
+Enter, Ctrl+C or Ctrl+U clears the region. Ctrl+U clears the command through
+the editor's input stream; the shell then publishes the updated empty buffer.
+A changed column count disables deletion
 until the shell reports its updated layout. Partial selections across an
 ambiguous wide-character wrap are left unchanged.
 

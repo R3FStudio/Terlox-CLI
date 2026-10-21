@@ -32,9 +32,16 @@ using namespace terlox;
 class GuiTests : public QObject {
     Q_OBJECT
     QTemporaryDir historyDirectory_;
+    QTemporaryDir configDirectory_;
     static QString content(Screen* screen) { QStringList lines; for (int row = 0; row < screen->rows(); ++row) lines << screen->text(row,0,screen->columns()-1); return lines.join('\n'); }
 private slots:
-    void initTestCase() { QVERIFY(historyDirectory_.isValid()); qputenv("TERLOX_HISTORY_FILE",historyDirectory_.filePath("history").toUtf8()); }
+    void initTestCase() {
+        QVERIFY(historyDirectory_.isValid()); QVERIFY(configDirectory_.isValid());
+        qputenv("TERLOX_HISTORY_FILE",historyDirectory_.filePath("history").toUtf8());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,configDirectory_.path());
+        QCoreApplication::setOrganizationName("TerloxTests"); QCoreApplication::setApplicationName("TerloxTests");
+    }
     void launchFocusDoesNotPinOrRestoreMinimizedWindow() {
         if (QGuiApplication::platformName()=="offscreen") QSKIP("Needs a desktop window manager");
         QWidget other; other.resize(500,350); other.show(); other.raise(); other.activateWindow();
@@ -121,9 +128,6 @@ private slots:
     }
 #endif
     void windowSessionAndTabs() {
-        QTemporaryDir config; QVERIFY(config.isValid());
-        QSettings::setDefaultFormat(QSettings::IniFormat); QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, config.path());
-        QCoreApplication::setOrganizationName("TerloxTests"); QCoreApplication::setApplicationName("TerloxTests");
         Window window; window.show(); QVERIFY(QTest::qWaitForWindowExposed(&window));
         auto* view = window.findChild<TerminalView*>(); QVERIFY(view);
         QCOMPARE(QFontInfo(view->font()).family(),QString("Cascadia Mono"));
@@ -542,13 +546,19 @@ private slots:
         window.raise(); window.activateWindow(); QVERIFY(QTest::qWaitForWindowActive(&window));
         auto* view=window.findChild<TerminalView*>(); QVERIFY(view);
         QTRY_VERIFY_WITH_TIMEOUT(content(view->screen()).contains('>'),10000);
+        auto ready=[&] { return view->screen()->editableInput().active() && view->screen()->editableInput().empty(); };
+        QTRY_VERIFY_WITH_TIMEOUT(ready(),10000);
         view->setFocus(); QTest::keyClicks(view,"/terlox blur 0.85"); QTest::keyClick(view,Qt::Key_Return);
         QTRY_COMPARE(Store().appearance().blur,.85);
         QTRY_VERIFY(content(view->screen()).contains("Updated blur"));
+        QTRY_VERIFY_WITH_TIMEOUT(ready(),10000);
+        QTest::keyClicks(view,"discard-input"); QTest::keyClick(view,Qt::Key_U,Qt::ControlModifier);
+        QTRY_VERIFY_WITH_TIMEOUT(ready(),10000);
         QTest::keyClicks(view,"/terlox opacity 0.5"); QTest::keyClick(view,Qt::Key_Return);
         QTRY_COMPARE(Store().appearance().opacity,.5);
+        QTRY_VERIFY_WITH_TIMEOUT(ready(),10000);
         QTest::keyClicks(view,"echo after-customization-ok"); QTest::keyClick(view,Qt::Key_Return);
-        QTRY_VERIFY_WITH_TIMEOUT(content(view->screen()).split('\n').contains("after-customization-ok"),10000);
+        QTRY_VERIFY2_WITH_TIMEOUT(content(view->screen()).split('\n').contains("after-customization-ok"),qPrintable(content(view->screen())),10000);
         QStringList labels,administratorChoices;
         QTimer::singleShot(50,&window,[&] {
             auto* menu=qobject_cast<QMenu*>(QApplication::activePopupWidget()); if (!menu) return;

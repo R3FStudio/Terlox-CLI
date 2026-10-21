@@ -153,6 +153,21 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(content(screen).split('\n').contains("wrapped-command-ok"),10000);
         process.stop();
     }
+    void clearingInputPreservesQueuedCommands() {
+        Process process; Screen screen(12,100); QString error;
+        connect(&process,&Process::received,&screen,&Screen::feed);
+        connect(&screen,&Screen::output,&process,&Process::write);
+        QVERIFY2(process.start({shell(),{},QDir::tempPath(),12,100},error),qPrintable(error));
+        QTRY_VERIFY_WITH_TIMEOUT(screen.editableInput().active(),10000);
+        for (int i=0;i<3;++i) {
+            const auto marker=QString("queued-command-%1-ok").arg(i);
+            process.write("echo must-be-cleared");
+            process.write(QByteArray(1,char(21))+"echo "+marker.toUtf8()+"\r");
+            QTRY_VERIFY_WITH_TIMEOUT(content(screen).split('\n').contains(marker),10000);
+            QVERIFY(!content(screen).split('\n').contains("must-be-cleared"));
+            QTRY_VERIFY_WITH_TIMEOUT(screen.editableInput().active() && screen.editableInput().empty(),10000);
+        }
+    }
     void protocolPassthrough() {
         Process process; Screen screen(24,80); QString error;
         connect(&process,&Process::received,&screen,&Screen::feed); connect(&screen,&Screen::output,&process,&Process::write);
