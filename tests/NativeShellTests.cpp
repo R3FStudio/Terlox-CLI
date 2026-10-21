@@ -3,6 +3,9 @@
 #include <QProcess>
 #include <QTemporaryDir>
 #include <QFile>
+#include <QProcessEnvironment>
+#include <QDir>
+#include <QFileInfo>
 #include "information/Version.h"
 #include "platform/Elevation.h"
 class NativeShellTests : public QObject {
@@ -48,7 +51,22 @@ private slots:
     }
     void nativeCommands() {
         QFETCH(QString,command); QFETCH(QByteArray,expected);
-        QProcess p; p.start(shell(),{"-c",command}); QVERIFY(p.waitForFinished(15000));
+        QProcess p;
+        if (QByteArray(QTest::currentDataTag())=="powershell-ls-alias") {
+            // Test the alias fallback without an external ls on the runner's PATH.
+            auto environment=QProcessEnvironment::systemEnvironment();
+            QStringList paths;
+            for (auto path:environment.value("PATH").split(';')) {
+                if (path.startsWith('"') && path.endsWith('"')) path=path.mid(1,path.size()-2);
+                const QDir directory(path); bool providesAlias=false;
+                for (const auto* suffix:{".exe",".com",".cmd",".bat",""})
+                    if (QFileInfo::exists(directory.filePath(QString("ls")+suffix))) providesAlias=true;
+                if (!providesAlias) paths << path;
+            }
+            environment.insert("PATH",paths.join(';'));
+            p.setProcessEnvironment(environment);
+        }
+        p.start(shell(),{"-c",command}); QVERIFY(p.waitForFinished(15000));
         QVERIFY2(p.exitCode()==0,p.readAllStandardError().constData()); QVERIFY(p.readAllStandardOutput().contains(expected));
     }
     void scripts_data() {

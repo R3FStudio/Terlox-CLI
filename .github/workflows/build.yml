@@ -22,7 +22,7 @@ jobs:
       matrix:
         include:
           - {name: windows-x64, os: windows-2022, qt_arch: win64_msvc2022_64}
-          - {name: linux-x64, os: ubuntu-24.04, qt_arch: gcc_64}
+          - {name: linux-x64, os: ubuntu-24.04, qt_arch: linux_gcc_64}
           - {name: macos-arm64, os: macos-15, qt_arch: clang_64}
           - {name: macos-x64, os: macos-15-intel, qt_arch: clang_64}
     runs-on: ${{ matrix.os }}
@@ -31,11 +31,12 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: '3.14'
       - uses: jurplel/install-qt-action@v4
         with:
           version: '6.8.3'
           arch: ${{ matrix.qt_arch }}
+          setup-python: false
           cache: true
       - uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
@@ -54,6 +55,9 @@ jobs:
           python tests/Check-Docs.py
           python tests/ContributionTests.py
           python tests/ReleaseCommandsTests.py
+      - name: Workflow cancellation checks
+        if: runner.os == 'Linux'
+        run: node --test tests/CancelSuperseded.test.cjs
       - name: Windows handoff runtime
         if: runner.os == 'Windows'
         run: python scripts/Deploy-Conpty.py --destination build-release/bin

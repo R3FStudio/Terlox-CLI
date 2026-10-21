@@ -2,6 +2,9 @@ name: Contribution terms
 on: [pull_request]
 permissions:
   contents: read
+concurrency:
+  group: contributions-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 jobs:
   signoffs:
     runs-on: ubuntu-24.04

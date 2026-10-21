@@ -370,6 +370,7 @@ private slots:
         view->setFocus();
         const auto size=view->font().pointSizeF();
         const auto columns=view->screen()->columns();
+        QSignalSpy gridChanges(view,&TerminalView::gridChanged);
         auto wheel=[&](int delta,Qt::KeyboardModifiers modifiers) {
             const QPointF local(60,60);
             QWheelEvent event(local,QPointF(view->mapToGlobal(local.toPoint())),QPoint(),QPoint(0,delta),Qt::NoButton,modifiers,Qt::NoScrollPhase,false);
@@ -377,7 +378,11 @@ private slots:
         };
         wheel(60,Qt::ControlModifier); QCOMPARE(view->font().pointSizeF(),size);
         wheel(60,Qt::ControlModifier); QCOMPARE(view->font().pointSizeF(),size+1);
-        QVERIFY(view->screen()->columns()<columns);
+        QVERIFY(!gridChanges.isEmpty());
+        // Adjacent point sizes can have the same device-pixel cell width.
+        wheel(360,Qt::ControlModifier); QCOMPARE(view->font().pointSizeF(),size+4);
+        QTRY_VERIFY(view->screen()->columns()<columns);
+        wheel(-360,Qt::ControlModifier); QCOMPARE(view->font().pointSizeF(),size+1);
         QCOMPARE(Store().appearance().font.pointSizeF(),size);
         window.executeApplicationCommand("/terlox opacity 0.46");
         QCOMPARE(Store().appearance().font.pointSizeF(),size);

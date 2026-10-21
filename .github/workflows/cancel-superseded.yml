@@ -1,0 +1,23 @@
+name: Cancel superseded runs
+on:
+  push:
+    branches: ['**']
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: cancel-superseded-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  cancel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const cancel = require('./scripts/Cancel-Superseded.cjs');
+            await cancel({github, context, core});
