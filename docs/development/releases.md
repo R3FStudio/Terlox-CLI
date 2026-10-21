@@ -62,6 +62,9 @@ in `information/Releases.cpp`. CMake supplies the app version and platform
 metadata; the packagers read the same value for filenames. Rebuild after changing
 it. Use the same version for the Git tag, with a `v` prefix.
 
+See [Change the project version](versioning.md) for the file locations, generated
+metadata and checks to run when making this change yourself.
+
 Before tagging a release, run the native CTest suite and documentation checks:
 
 ```sh

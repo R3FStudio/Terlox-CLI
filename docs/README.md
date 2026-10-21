@@ -24,6 +24,7 @@ Guides for installing and using Terlox, plus references for development and rele
 
 ## Work on Terlox
 
+- [Change the project version](development/versioning.md) — files to edit, where the number is used and how to check it.
 - [Set up dependencies](development/dependencies.md) — install the build tools and understand what each one does.
 - [Build and test](development/building.md) — get from source files to an installable package.
 - [Contributing](../CONTRIBUTING.md) — code, documentation, authorship and sign-offs.
