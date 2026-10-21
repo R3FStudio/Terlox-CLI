@@ -100,11 +100,17 @@ jobs:
             dist/*.AppImage
             dist/*.pkg
           if-no-files-found: error
-      - name: Upload test logs
+      - name: Test logs
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-logs-${{ matrix.name }}
-          path: |
-            build-release/Testing/Temporary/
-            build-release/tests/*-results.txt
+        shell: python
+        run: |
+          from pathlib import Path
+
+          logs = sorted(Path('build-release/tests').glob('*-results.txt'))
+          ctest_log = Path('build-release/Testing/Temporary/LastTest.log')
+          if ctest_log.is_file():
+              logs.append(ctest_log)
+          for log in logs:
+              print(f'::group::{log.name}', flush=True)
+              print(log.read_text(encoding='utf-8', errors='replace'), flush=True)
+              print('::endgroup::', flush=True)
