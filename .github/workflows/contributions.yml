@@ -1,0 +1,19 @@
+name: Contribution terms
+on: [pull_request]
+permissions:
+  contents: read
+jobs:
+  signoffs:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Check contributor sign-offs
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/Check-Contributions.py --base "$BASE_SHA" --head "$HEAD_SHA"

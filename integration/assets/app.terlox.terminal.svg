@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="glass" gradientUnits="userSpaceOnUse" x1="160" y1="152" x2="790" y2="872">
+      <stop stop-color="#27272f"/><stop offset=".5" stop-color="#121318"/><stop offset="1" stop-color="#090b10"/>
+    </linearGradient>
+    <linearGradient id="reflection" gradientUnits="userSpaceOnUse" x1="180" y1="152" x2="530" y2="540">
+      <stop stop-color="#fff" stop-opacity=".055"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="surface"><rect x="68" y="152" width="888" height="720" rx="124"/></clipPath>
+  </defs>
+  <rect x="48" y="132" width="928" height="760" rx="144" fill="#ba5666"/>
+  <rect x="68" y="152" width="888" height="720" rx="124" fill="url(#glass)"/>
+  <rect x="48" y="132" width="928" height="760" fill="url(#reflection)" clip-path="url(#surface)"/>
+  <path d="m274 354 170 158-170 158" fill="none" stroke="#e68294" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="556" y="632" width="208" height="76" rx="18" fill="#e68294"/>
+</svg>

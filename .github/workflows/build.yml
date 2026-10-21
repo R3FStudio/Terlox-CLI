@@ -1,0 +1,106 @@
+name: Native builds
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: Packaging command request identifier
+        required: false
+        type: string
+run-name: ${{ github.event.inputs.request_id && format('Packages {0}', github.event.inputs.request_id) || format('Native builds - {0}', github.ref_name) }}
+permissions:
+  contents: read
+concurrency:
+  group: native-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: windows-x64, os: windows-2022, qt_arch: win64_msvc2022_64}
+          - {name: linux-x64, os: ubuntu-24.04, qt_arch: gcc_64}
+          - {name: macos-arm64, os: macos-15, qt_arch: clang_64}
+          - {name: macos-x64, os: macos-15-intel, qt_arch: clang_64}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          arch: ${{ matrix.qt_arch }}
+          cache: true
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+      - name: Build tools
+        run: python -m pip install ninja
+      - name: Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxcb-cursor0 libfontconfig1 vim dpkg-dev file patchelf desktop-file-utils
+      - name: Configure
+        run: cmake --preset release
+      - name: Build
+        run: cmake --build --preset release --parallel 4
+      - name: Installation metadata checks
+        run: |
+          python tests/IntegrationTests.py
+          python tests/Check-Docs.py
+          python tests/ContributionTests.py
+          python tests/ReleaseCommandsTests.py
+      - name: Windows handoff runtime
+        if: runner.os == 'Windows'
+        run: python scripts/Deploy-Conpty.py --destination build-release/bin
+      - name: Core, process, shell and protocol tests
+        run: ctest --test-dir build-release --output-on-failure -E "^gui$"
+      - name: GUI tests
+        env:
+          QT_QUICK_BACKEND: software
+          QT_QPA_PLATFORM: offscreen
+        run: ctest --test-dir build-release --output-on-failure -R "^gui$"
+      - name: Package Windows runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/Package-Windows.ps1 -QtRoot $env:QT_ROOT_DIR
+      - name: Verify single Windows installer
+        if: runner.os == 'Windows'
+        run: python scripts/Smoke-Package.py --software
+      - name: Verify Windows install, repair and uninstall
+        if: runner.os == 'Windows'
+        run: python tests/WindowsUninstallSmoke.py
+      - name: Package Linux AppImage and Debian installer
+        if: runner.os == 'Linux'
+        run: python scripts/Package-Linux.py
+      - name: Verify Linux packages
+        if: runner.os == 'Linux'
+        run: python scripts/Smoke-Unix-Packages.py
+      - name: Package macOS installer
+        if: runner.os == 'macOS'
+        run: python scripts/Package-macOS.py
+      - name: Verify macOS package
+        if: runner.os == 'macOS'
+        run: python scripts/Smoke-Unix-Packages.py
+      - name: Upload release installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: terlox-${{ matrix.name }}
+          path: |
+            dist/*.exe
+            dist/*.deb
+            dist/*.AppImage
+            dist/*.pkg
+          if-no-files-found: error
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ matrix.name }}
+          path: |
+            build-release/Testing/Temporary/
+            build-release/tests/*-results.txt

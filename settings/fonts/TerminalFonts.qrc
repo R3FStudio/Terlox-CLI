@@ -1,0 +1,6 @@
+<RCC><qresource prefix="/terlox/fonts">
+ <file alias="CascadiaMono-Regular.ttf">../../dependencies/fonts/cascadia/CascadiaMono-Regular.ttf</file>
+ <file alias="CascadiaMono-Bold.ttf">../../dependencies/fonts/cascadia/CascadiaMono-Bold.ttf</file>
+ <file alias="CascadiaMono-Italic.ttf">../../dependencies/fonts/cascadia/CascadiaMono-Italic.ttf</file>
+ <file alias="CascadiaMono-BoldItalic.ttf">../../dependencies/fonts/cascadia/CascadiaMono-BoldItalic.ttf</file>
+</qresource></RCC>

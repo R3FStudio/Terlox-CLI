@@ -1,0 +1,6 @@
+add_executable(terlox_icon_builder BuildIcons.cpp IconPainter.cpp IconPainter.h)
+target_link_libraries(terlox_icon_builder PRIVATE Qt6::Gui)
+  set(CMAKE_AUTORCC ON)
+  add_library(terlox_branding STATIC Brand.h Brand.cpp Brand.qrc)
+  target_link_libraries(terlox_branding PUBLIC Qt6::Gui)
+  target_include_directories(terlox_branding PUBLIC ${PROJECT_SOURCE_DIR})

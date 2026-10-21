@@ -1,0 +1,11 @@
+<RCC><qresource prefix="/terlox/icons">
+ <file alias="terlox-16.png">icons/terlox-16.png</file>
+ <file alias="terlox-24.png">icons/terlox-24.png</file>
+ <file alias="terlox-32.png">icons/terlox-32.png</file>
+ <file alias="terlox-48.png">icons/terlox-48.png</file>
+ <file alias="terlox-64.png">icons/terlox-64.png</file>
+ <file alias="terlox-128.png">icons/terlox-128.png</file>
+ <file alias="terlox-256.png">icons/terlox-256.png</file>
+ <file alias="terlox-512.png">icons/terlox-512.png</file>
+ <file alias="terlox-1024.png">icons/terlox-1024.png</file>
+</qresource></RCC>

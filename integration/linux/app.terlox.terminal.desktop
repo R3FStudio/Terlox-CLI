@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Terlox
+GenericName=Terminal Emulator
+Comment=Native terminal with GPU rendering
+Exec=terlox
+TryExec=terlox
+Icon=app.terlox.terminal
+Terminal=false
+Categories=System;TerminalEmulator;
+Keywords=terminal;shell;console;
+StartupWMClass=terlox
+X-TerminalArgExec=-e
+X-TerminalArgDir=--working-directory

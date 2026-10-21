@@ -1,0 +1,5 @@
+if(WIN32)
+  add_executable(terlox_presentation WIN32 Capture.cpp Backdrop.cpp Backdrop.h ../../tests/CompositorCapture.cpp)
+  target_link_libraries(terlox_presentation PRIVATE terlox_window terlox_branding Qt6::Test gdi32 user32)
+  add_dependencies(terlox_presentation terloxsh)
+endif()
