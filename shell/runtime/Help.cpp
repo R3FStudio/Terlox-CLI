@@ -15,7 +15,7 @@ QString shellHelp() {
            "history                List interactive command history\n"
            "help                   Show this command list\n"
            "terlox-default [set|status|restore]  OS default terminal preference\n"
-           "terlox-update [check]  Check GitHub for a public stable update\n"
+           "terlox-update [check]  Check releases; confirm to install and restart\n"
            "admin --help           Explicit administrator-session options\n"
 #ifdef Q_OS_WIN
            "sudo command           Request Windows UAC for a command\n"

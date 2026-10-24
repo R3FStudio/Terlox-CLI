@@ -9,6 +9,7 @@ import winreg
 import json
 import hashlib
 import re
+import sys
 from WindowsDefaultTerminal import KEYS, TERMINAL, snapshot, restore, normalized
 
 ARP=r'Software\Microsoft\Windows\CurrentVersion\Uninstall\Terlox'
@@ -45,6 +46,18 @@ def main():
             assert (target/'Uninstall.exe').is_file() and snapshot(ARP)
             print('Legacy installation repair added uninstall support without replacing the terminal.')
             personal=target/'my files/keep.txt'; personal.parent.mkdir(); personal.write_text('keep my work')
+            request=Path(temporary)/'update request.json'
+            parent=subprocess.Popen([sys.executable,'-c','import time; time.sleep(1)'])
+            request.write_text(json.dumps({'application':'app.terlox.terminal','directory':str(target),'pid':parent.pid,'restart':False}))
+            setup=root/'dist'/f'Terlox-{version}-windows-x64-setup.exe'
+            update=subprocess.run(f'"{setup}" /S /UPDATE="{request}"',env=environment,timeout=120)
+            parent.wait(timeout=10)
+            assert update.returncode==0,'The update installer did not finish successfully.'
+            report=json.loads((Path(temporary)/'result.json').read_text())
+            assert report['success'],report
+            assert personal.read_text()=='keep my work'
+            assert json.loads((target/'.terlox-install.json').read_text())['version']==version
+            print('Silent self-contained update waited for the previous process, upgraded the existing folder and preserved user files.')
             # A separate baseline tests restore even when the user's installed
             # Terlox is already their default. The final block restores it.
             if saved[KEYS[0]] and any(name=='DelegationTerminal' and str(value).casefold()==TERMINAL.casefold() for name,value,_ in saved[KEYS[0]][0]):

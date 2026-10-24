@@ -17,26 +17,15 @@ void Window::executeApplicationCommand(const QString& command) {
     }
     auto args=QProcess::splitCommand(command.mid(7).trimmed());
     if (args.value(0)=="update") {
-        auto* process=new QProcess(view);
-        process->setProgram(QDir(QCoreApplication::applicationDirPath()).filePath(
+        const auto executable=QDir(QCoreApplication::applicationDirPath()).filePath(
 #ifdef Q_OS_WIN
             "terloxctl.exe"
 #else
             "terloxctl"
 #endif
-        ));
-        process->setArguments(QStringList{"update"}+args.mid(1));
-        process->setProcessChannelMode(QProcess::MergedChannels);
-        connect(process,&QProcess::readyReadStandardOutput,view,[view,process] {
-            auto text=process->readAllStandardOutput(); text.replace("\r\n","\n"); text.replace("\n","\r\n"); view->screen()->feed(text);
-        });
-        connect(process,&QProcess::errorOccurred,view,[view,process](QProcess::ProcessError error) {
-            if (error==QProcess::FailedToStart) {
-                view->screen()->feed("\r\nCould not start the update checker. Use the complete installed Terlox package.\r\n"); process->deleteLater();
-            }
-        });
-        connect(process,qOverload<int,QProcess::ExitStatus>(&QProcess::finished),process,&QObject::deleteLater);
-        view->screen()->feed("\r\n"); process->start(); return;
+        );
+        newSession({"Update",{executable,QStringList{"update"}+args.mid(1),QDir::currentPath()}});
+        return;
     }
     if (args.value(0)=="default-shell") {
         if (args.size()==2) for (const auto& profile:profiles_) if (profile.name==args[1]) { store_.setDefaultProfile(profile.name); reply("Default shell set to "+profile.name+" (new sessions)."); return; }

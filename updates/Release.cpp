@@ -41,7 +41,12 @@ bool parseRelease(const QByteArray& json,const QString& platform,Release& releas
     else if (platform=="macos-arm64" || platform=="macos-x64") names << "Terlox-"+v+'-'+platform+".pkg";
     for (const auto& expected:names) for (const auto& value:object.value("assets").toArray()) {
         const auto asset=value.toObject(); const auto url=QUrl(asset.value("browser_download_url").toString());
-        if (asset.value("name").toString()==expected && repositoryUrl(url,"releases/download/")) { release.downloads << url; break; }
+        if (asset.value("name").toString()==expected && url.fileName()==expected && repositoryUrl(url,"releases/download/")) {
+            release.downloads << url;
+            release.digests.insert(url.toString(),asset.value("digest").toString());
+            release.sizes.insert(url.toString(),asset.value("size").toInteger());
+            break;
+        }
     }
     return true;
 }

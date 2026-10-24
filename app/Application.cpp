@@ -8,6 +8,11 @@
 #include "platform/Environment.h"
 #include "settings/AdminProfile.h"
 #include "integration/defaults/Command.h"
+#include "updates/Service.h"
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QMessageBox>
 #ifdef Q_OS_WIN
 #include "integration/windows/HandoffServer.h"
 #endif
@@ -30,6 +35,8 @@ int runApplication(int argc, char** argv) {
     QApplication app(argc, argv); app.setApplicationName("Terlox"); app.setOrganizationName("Terlox"); app.setApplicationVersion(TERLOX_VERSION);
     app.setDesktopFileName("app.terlox.terminal");
     app.setWindowIcon(brandIcon());
+    updates::Service updateService;
+    QObject::connect(&updateService,&updates::Service::restartRequested,&app,&QCoreApplication::quit);
 #ifdef Q_OS_MACOS
     FileOpenHandler fileOpen(&app); app.installEventFilter(&fileOpen);
 #endif
@@ -46,6 +53,7 @@ int runApplication(int argc, char** argv) {
     }
 #endif
     QCommandLineParser parser; parser.setApplicationDescription("Native terminal and shell"); parser.addHelpOption(); parser.addVersionOption();
+    parser.addOption({"update-result","Result report from the update installer","path"});
     QCommandLineOption profile("profile", "Launch the named shell profile", "name"); parser.addOption(profile);
     QCommandLineOption diagnostics("diagnostics","Initialize a real terminal/GPU frame, print diagnostics and exit"); parser.addOption(diagnostics);
     QCommandLineOption diagnosticsOutput("diagnostics-output","Write diagnostics to this UTF-8 file","path"); parser.addOption(diagnosticsOutput);
@@ -103,6 +111,17 @@ int runApplication(int argc, char** argv) {
         },Qt::ConnectionType(Qt::QueuedConnection|Qt::SingleShotConnection));
         QTimer::singleShot(10000,&app,[&] { app.exit(2); });
     }
-    window.show(); return app.exec();
+    window.show();
+    if (parser.isSet("update-result")) {
+        QFile report(parser.value("update-result"));
+        if (report.open(QIODevice::ReadOnly) && report.size()<8192) {
+            const auto result=QJsonDocument::fromJson(report.readAll()).object();
+            if (result.value("success").isBool() && !result.value("success").toBool()) {
+                const auto message=result.value("message").toString()+"\n\nReport: "+report.fileName();
+                QTimer::singleShot(0,&window,[&window,message] { QMessageBox::warning(&window,"Terlox update",message); });
+            }
+        }
+    }
+    return app.exec();
 }
 }

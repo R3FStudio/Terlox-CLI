@@ -156,7 +156,7 @@ it as a release payload. The package marker identifies the deployed folder.
 | Folder | What belongs there |
 | --- | --- |
 | `information` | Shared version, shortcut catalog, release history, text report and About page |
-| `updates` | GitHub release lookup, version comparison, platform download selection and update commands |
+| `updates` | Release lookup, confirmation, verified downloads, local update service and native installer handoff |
 | `branding` | Icon painter, exported PNG/ICO/ICNS files and shared Qt icon resources |
 | `branding/presentation` | README screenshot tool and its background window |
 | `integration` | Linux desktop metadata, Windows register/unregister scripts and macOS bundle/install files |

@@ -23,6 +23,7 @@ AutoCloseWindow true
 ShowInstDetails nevershow
 Page instfiles
 Var VerifyOnly
+Var UpdateRequest
 
 Function .onInit
   ${IfNot} ${RunningX64}
@@ -30,6 +31,12 @@ Function .onInit
     Abort
   ${EndIf}
   StrCpy $VerifyOnly "0"
+  StrCpy $UpdateRequest ""
+  ClearErrors
+  ${GetOptions} "$CMDLINE" "/UPDATE=" $UpdateRequest
+  ${If} $UpdateRequest != ""
+    SetSilent silent
+  ${EndIf}
   ClearErrors
   ${GetOptions} "$CMDLINE" "/VERIFY" $0
   IfErrors normal_start
@@ -46,6 +53,15 @@ Section
   File /r "${PAYLOAD_DIR}\*"
   IfErrors extraction_failed
   StrCmp $VerifyOnly "1" verify
+    StrCmp $UpdateRequest "" wizard
+      ClearErrors
+      nsExec::ExecToStack '"$PLUGINSDIR\payload\terlox-maintenance.exe" --update "$UpdateRequest" --package "$PLUGINSDIR\payload"'
+      Pop $0
+      Pop $1
+      StrCmp $0 "error" launch_failed
+      StrCmp $0 "timeout" launch_failed
+      Goto finished
+  wizard:
     ShowWindow $HWNDPARENT ${SW_HIDE}
     ClearErrors
     ExecWait '"$PLUGINSDIR\payload\terlox-setup-wizard.exe" --package "$PLUGINSDIR\payload"' $0

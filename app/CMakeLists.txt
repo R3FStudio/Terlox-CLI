@@ -1,5 +1,5 @@
 add_executable(terlox WIN32 main.cpp Application.cpp Application.h LaunchArguments.cpp LaunchArguments.h)
-target_link_libraries(terlox PRIVATE terlox_window terlox_branding terlox_defaults)
+target_link_libraries(terlox PRIVATE terlox_window terlox_branding terlox_defaults terlox_updates)
 if(WIN32)
   target_link_libraries(terlox PRIVATE terlox_handoff)
   target_include_directories(terlox PRIVATE ${PROJECT_SOURCE_DIR}/branding)

@@ -34,7 +34,7 @@ to put in a Bash or PowerShell script.
 | `/terlox default-shell "name"` | Choose the shell for new sessions |
 | `/terlox profile-add` | Add a shell executable, arguments and starting folder |
 | `/terlox reset` | Restore the default appearance |
-| `/terlox update` | Check the latest public stable Terlox release |
+| `/terlox update` | Check for a stable release and confirm installation and restart; add `check` to only check |
 
 Border colors are saved with your other settings. You can use a hex color such
 as `#79a7e8` or a named color such as `tomato`. Inactive windows still use dark
@@ -97,7 +97,7 @@ From an existing command line:
 | `terlox --working-directory "path"` | Start in a particular folder |
 | `terlox -e program "argument"` | Run a program directly |
 | `terlox --reset-text-size` | Reset saved text size and open Terlox |
-| `terloxctl update` | Check for an update from any shell |
+| `terloxctl update` | Check for an update and confirm installation inside Terlox; add `check` to only check |
 
 Place Terlox's options before `-e`; everything after it belongs to the program.
 Use a shell with `-e` if the command needs pipes or shell syntax. Commands must

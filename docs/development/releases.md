@@ -140,13 +140,15 @@ unsigned packages; it does not have your signing credentials.
 
 ## Updating an installed app
 
+The [in-terminal updater](../using/updates.md) can download, install and restart
+after confirmation. For a manual upgrade, use the steps below.
+
 **Windows:** close Terlox and run the new setup EXE into the existing folder. The
 inventory lets setup replace app files while keeping preferences and user-added
 files. Uninstall is available from Windows Installed apps or `Uninstall.exe`.
 
 **Linux:** install the newer `.deb` with the package manager, or replace your
-AppImage and keep its launcher pointing to the new file. There is no automatic
-updater.
+AppImage and keep its launcher pointing to the new file.
 
 **macOS:** quit Terlox and run the newer `.pkg`. It replaces
 `/Applications/Terlox.app`. Remove any separate development copy under your home

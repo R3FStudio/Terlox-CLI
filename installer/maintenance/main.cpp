@@ -1,6 +1,7 @@
 #include "installer/backend/InstallEngine.h"
 #include "installer/uninstall/UninstallPlan.h"
 #include "installer/windows/InstalledApplication.h"
+#include "Update.h"
 #include <QCoreApplication>
 #include <QCommandLineParser>
 #include <QSaveFile>
@@ -10,13 +11,15 @@ int main(int argc,char** argv) {
     QCommandLineParser parser; parser.addHelpOption();
     parser.addOption({"uninstall","Remove the installation inventory and its Windows registration"});
     parser.addOption({"install","Install a deployed package without desktop shortcuts"});
+    parser.addOption({"update","Apply a downloaded update after its terminal closes","request"});
     parser.addOption({"repair-uninstaller","Add uninstall support to an existing installation"});
     parser.addOption({"directory","Installation folder","path"});
     parser.addOption({"package","Deployed package for installation","path"});
     parser.addOption({"report","Write a UTF-8 result report","path"}); parser.process(app);
     QString error; QStringList notes; bool success=false;
-    const int actions=int(parser.isSet("install"))+int(parser.isSet("uninstall"))+int(parser.isSet("repair-uninstaller"));
-    if (!parser.isSet("directory") || actions!=1) error="Specify --directory and exactly one maintenance action.";
+    const int actions=int(parser.isSet("install"))+int(parser.isSet("uninstall"))+int(parser.isSet("repair-uninstaller"))+int(parser.isSet("update"));
+    if (actions!=1 || (!parser.isSet("directory") && !parser.isSet("update"))) error="Specify --directory and exactly one maintenance action.";
+    else if (parser.isSet("update")) success=terlox::setup::applyUpdate(parser.value("update"),parser.value("package"),error);
     else if (parser.isSet("repair-uninstaller")) success=terlox::setup::repairUninstaller(parser.value("package"),parser.value("directory"),error);
     else if (parser.isSet("install")) {
         terlox::setup::InstallPlan plan;

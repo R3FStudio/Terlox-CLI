@@ -1,12 +1,18 @@
 #include "Command.h"
 #include "Client.h"
+#include "Service.h"
 #include "information/Version.h"
 #include <iostream>
 
 namespace terlox {
+bool confirmUpdate(std::istream& input,std::ostream& output) {
+    output << "Update now? Terlox will close its sessions, install the update, and restart. [yes/no]: " << std::flush;
+    std::string answer;
+    return std::getline(input,answer) && QString::fromStdString(answer).trimmed().compare("yes",Qt::CaseInsensitive)==0;
+}
 int updateCommand(const QStringList& arguments) {
     if (arguments==QStringList{"--help"} || arguments==QStringList{"help"}) {
-        std::cout << "terlox-update [check]\nterloxctl update [check]\nCheck the latest public stable Terlox release. No files are installed.\n"; return 0;
+        std::cout << "terlox-update [check]\nterloxctl update [check]\nCheck stable releases; type yes when prompted to install and restart.\nThe check argument only checks and never installs.\n"; return 0;
     }
     if (!arguments.isEmpty() && arguments!=QStringList{"check"}) { std::cerr << "Usage: terlox-update [check] or terloxctl update [check]\n"; return 2; }
     std::cout << "Checking R3FStudio/Terlox-CLI for updates...\n" << std::flush;
@@ -23,7 +29,12 @@ int updateCommand(const QStringList& arguments) {
     if (comparison>0) {
         if (result.release.downloads.isEmpty()) std::cout << "No installer matches this platform yet. Check the release page.\n";
         for (const auto& url:result.release.downloads) std::cout << url.toString().toUtf8().constData() << '\n';
-        std::cout << "Download the appropriate package, close Terlox, and run the installer or replace your AppImage.\n";
+        if (arguments==QStringList{"check"} || result.release.downloads.isEmpty()) return 0;
+        if (!confirmUpdate(std::cin,std::cout)) {
+            std::cout << "Update cancelled.\n"; return 0;
+        }
+        QString error;
+        if (!updates::requestInstallation(error)) { std::cerr << error.toUtf8().constData() << '\n'; return 1; }
     }
     return 0;
 }

@@ -1,3 +1,7 @@
 #pragma once
 #include <QStringList>
-namespace terlox { int updateCommand(const QStringList& arguments); }
+#include <iosfwd>
+namespace terlox {
+bool confirmUpdate(std::istream& input,std::ostream& output);
+int updateCommand(const QStringList& arguments);
+}
