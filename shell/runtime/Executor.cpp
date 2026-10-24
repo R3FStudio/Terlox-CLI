@@ -1,5 +1,6 @@
 #include "Executor.h"
 #include "NativeShell.h"
+#include "TerminalState.h"
 #include "information/About.h"
 #include "shell/parsing/Parser.h"
 #include <QCoreApplication>
@@ -36,6 +37,7 @@ int execute(const Pipeline& pipeline, ShellState& state) {
         std::cout.flush(); std::cerr.flush(); std::cout.rdbuf(oldOut); std::cerr.rdbuf(oldErr); return code;
     }
     std::vector<std::unique_ptr<QProcess>> processes;
+    TerminalState terminalState;
     for (size_t i = 0; i < pipeline.size(); ++i) {
         const auto& c = pipeline[i]; auto p = std::make_unique<QProcess>();
         auto args = c.arguments; const auto executable = args.takeFirst();

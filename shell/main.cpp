@@ -8,11 +8,17 @@
 #include <QStandardPaths>
 #include <iostream>
 #include <csignal>
+#ifndef Q_OS_WIN
+#include "platform/posix/Signals.h"
+#endif
 #ifdef Q_OS_WIN
 #include <windows.h>
 static BOOL WINAPI interrupt(DWORD event) { return event == CTRL_C_EVENT || event == CTRL_BREAK_EVENT; }
 #endif
 int main(int argc, char** argv) {
+#ifndef Q_OS_WIN
+    if (!terlox::resetTerminalSignals()) { std::cerr << "terloxsh: cannot initialize process signals\n"; return 126; }
+#endif
     QCoreApplication app(argc, argv); app.setApplicationName("Terlox"); app.setOrganizationName("Terlox");
 #ifdef Q_OS_WIN
     SetConsoleCP(CP_UTF8); SetConsoleOutputCP(CP_UTF8);

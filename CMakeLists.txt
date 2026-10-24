@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(Terlox VERSION 1.0.0 LANGUAGES C CXX)
+project(Terlox VERSION 1.0.1 LANGUAGES C CXX)
 if(WIN32)
   enable_language(RC)
   configure_file(branding/Version.rc.in ${CMAKE_BINARY_DIR}/branding/Version.rc @ONLY)

@@ -3,6 +3,7 @@
 #include "platform/Environment.h"
 #include "terminal/Screen.h"
 #include "TerminalClientFixture.h"
+#include "UnixProcessFixture.h"
 #include <QCoreApplication>
 #include <QDir>
 #include <QBuffer>
@@ -20,6 +21,7 @@
 #include <io.h>
 #else
 #include <unistd.h>
+#include <signal.h>
 #endif
 using namespace terlox;
 class ProcessTests : public QObject {
@@ -33,6 +35,89 @@ class ProcessTests : public QObject {
     }
     static QString content(Screen& s) { QStringList lines; for (int row = 0; row < s.rows(); ++row) lines << s.text(row,0,s.columns()-1); return lines.join('\n'); }
 private slots:
+#ifndef Q_OS_WIN
+    void standaloneShellRepairsInheritedSignals() {
+        QProcess process;
+        process.start(QCoreApplication::applicationFilePath(),{"--unix-inherited-signals-child"});
+        QVERIFY(process.waitForFinished(10000));
+        const auto output=process.readAllStandardOutput();
+        QVERIFY2(output.contains("signals-clean=1"),output.constData());
+        QVERIFY2(output.contains("child-wait-ok=1"),output.constData());
+        QCOMPARE(process.exitCode(),0);
+    }
+    void ptyRepairsInheritedSignalMask() {
+        sigset_t blocked,previous; sigemptyset(&blocked);
+        sigaddset(&blocked,SIGCHLD); sigaddset(&blocked,SIGINT); sigaddset(&blocked,SIGTERM);
+        QVERIFY(sigprocmask(SIG_BLOCK,&blocked,&previous)==0);
+        const auto restore=qScopeGuard([&] { sigprocmask(SIG_SETMASK,&previous,nullptr); });
+        Process process; QByteArray output; QString error;
+        connect(&process,&Process::received,this,[&](const QByteArray& bytes) { output+=bytes; });
+        QSignalSpy exited(&process,&Process::exited);
+        QVERIFY2(process.start({QCoreApplication::applicationFilePath(),{"--unix-state-child"},QDir::tempPath(),24,100},error),qPrintable(error));
+        sigprocmask(SIG_SETMASK,&previous,nullptr);
+        QTRY_COMPARE_WITH_TIMEOUT(exited.size(),1,10000);
+        QVERIFY2(output.contains("signals-clean=1"),output.constData());
+        QVERIFY2(output.contains("child-wait-ok=1"),output.constData());
+        QCOMPARE(exited[0][0].toInt(),0);
+    }
+    void childTerminalChangesDoNotBreakFollowingCommands() {
+        Process process; Screen screen(24,100); QString error;
+        connect(&process,&Process::received,&screen,&Screen::feed);
+        connect(&screen,&Screen::output,&process,&Process::write);
+        QVERIFY2(process.start({shell(),{},QDir::tempPath(),24,100},error),qPrintable(error));
+        QTRY_VERIFY_WITH_TIMEOUT(screen.editableInput().active(),10000);
+        const auto executable='"'+QCoreApplication::applicationFilePath()+'"';
+        process.write((executable+" --unix-damaged-terminal-child\r").toUtf8());
+        QTRY_VERIFY_WITH_TIMEOUT(content(screen).contains("terminal-modes-changed"),10000);
+        QTRY_VERIFY_WITH_TIMEOUT(screen.editableInput().active(),10000);
+        process.write((executable+" --unix-state-child\r").toUtf8());
+        QTRY_VERIFY_WITH_TIMEOUT(content(screen).contains("terminal-ready=1"),10000);
+        QTRY_VERIFY_WITH_TIMEOUT(content(screen).contains("child-wait-ok=1"),10000);
+    }
+    void sudoAndFollowingCommands() {
+        if (QStandardPaths::findExecutable("sudo").isEmpty()) QSKIP("sudo is not installed");
+        Process process; Screen screen(24,100); QString error;
+        connect(&process,&Process::received,&screen,&Screen::feed);
+        connect(&screen,&Screen::output,&process,&Process::write);
+        QVERIFY2(process.start({shell(),{},QDir::tempPath(),24,100},error),qPrintable(error));
+        QTRY_VERIFY_WITH_TIMEOUT(screen.editableInput().active(),10000);
+        process.write("sudo -n -- /usr/bin/true; echo sudo-returned\r");
+        QTRY_VERIFY_WITH_TIMEOUT(content(screen).split('\n').contains("sudo-returned"),10000);
+        QTRY_VERIFY_WITH_TIMEOUT(screen.editableInput().active(),10000);
+        process.write(('"'+QCoreApplication::applicationFilePath()+"\" --unix-state-child\r").toUtf8());
+        QTRY_VERIFY_WITH_TIMEOUT(content(screen).contains("child-wait-ok=1"),10000);
+        QTRY_VERIFY_WITH_TIMEOUT(content(screen).contains("terminal-ready=1"),10000);
+        QVERIFY2(!content(screen).contains("No child processes"),qPrintable(content(screen)));
+    }
+    void sudoChildExitStatus() {
+        const auto sudo=QStandardPaths::findExecutable("sudo");
+        if (sudo.isEmpty()) QSKIP("sudo is not installed");
+        QProcess permission;
+        permission.start(sudo,{"-n","--","/usr/bin/true"});
+        QVERIFY(permission.waitForFinished(10000));
+        if (permission.exitCode()!=0) QSKIP("Noninteractive sudo is not authorized on this machine");
+        Process process; Screen screen(24,100); QString error;
+        connect(&process,&Process::received,&screen,&Screen::feed);
+        connect(&screen,&Screen::output,&process,&Process::write);
+        QVERIFY2(process.start({shell(),{},QDir::tempPath(),24,100},error),qPrintable(error));
+        QTRY_VERIFY_WITH_TIMEOUT(screen.editableInput().active(),10000);
+        process.write("sudo -n -- /bin/sh -c 'exit 37'; echo sudo-status-$?\r");
+        QTRY_VERIFY_WITH_TIMEOUT(content(screen).split('\n').contains("sudo-status-37"),10000);
+        QTRY_VERIFY_WITH_TIMEOUT(screen.editableInput().active(),10000);
+    }
+    void finalOutputArrivesBeforeExit() {
+        for (int attempt=0;attempt<5;++attempt) {
+            Process process; QByteArray output; QString error;
+            connect(&process,&Process::received,this,[&](const QByteArray& bytes) { output+=bytes; });
+            QSignalSpy exited(&process,&Process::exited);
+            QVERIFY2(process.start({QCoreApplication::applicationFilePath(),{"--final-output-child"},QDir::tempPath(),24,100},error),qPrintable(error));
+            QTRY_COMPARE_WITH_TIMEOUT(exited.size(),1,10000);
+            QVERIFY2(output.endsWith("final-output-complete"),output.right(200).constData());
+            QCOMPARE(output.count('x'),65536);
+            QCOMPARE(exited[0][0].toInt(),23);
+        }
+    }
+#endif
     void interactiveEnvironmentPreservesColorPreferences() {
         const auto oldTerm=qgetenv("TERM"),oldColor=qgetenv("NO_COLOR");
         const auto restore=qScopeGuard([&] { for (const auto& pair:{qMakePair("TERM",oldTerm),qMakePair("NO_COLOR",oldColor)}) { if (pair.second.isNull()) qunsetenv(pair.first); else qputenv(pair.first,pair.second); } });
@@ -291,6 +376,11 @@ private slots:
 };
 int main(int argc,char** argv) {
     QCoreApplication app(argc,argv);
+    if (const auto result=runUnixProcessFixture();result>=0) return result;
+    if (app.arguments().contains("--final-output-child")) {
+        std::cout << std::string(65536,'x') << "final-output-complete" << std::flush;
+        return 23;
+    }
     if (app.arguments().contains("--palette-query-child")) return runTerminalClientFixture();
     if (app.arguments().contains("--hidden-input-child")) return runHiddenInputFixture();
     if (app.arguments().contains("--tty-child")) {

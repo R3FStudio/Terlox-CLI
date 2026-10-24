@@ -1,7 +1,9 @@
 #include "Releases.h"
 namespace terlox {
 QString releaseHistory() {
-    return "1.0.0 - self-contained Windows installer, native release packaging,\n"
+    return "1.0.1 - reset inherited Unix process signals, restore terminal modes after\n"
+           "        child commands, and deliver final PTY output before session exit.\n"
+           "1.0.0 - self-contained Windows installer, native release packaging,\n"
            "        default-folder fix, Windows console handoff, terminal preference commands,\n"
            "        launch-only foreground activation, Windows uninstall/Installed apps support,\n"
            "        clean frameless minimize/restore, per-cell styles/alpha, release commands,\n"

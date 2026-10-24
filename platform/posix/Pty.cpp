@@ -1,5 +1,6 @@
 #include "platform/Process.h"
 #include "platform/Environment.h"
+#include "Signals.h"
 #include <QFile>
 #include <QMetaObject>
 #include <QStandardPaths>
@@ -46,7 +47,7 @@ bool Process::start(const LaunchOptions& o, QString& error) {
     d->child = forkpty(&d->master, nullptr, nullptr, &size);
     if (d->child == 0) {
         close(d->wake[0]); close(d->wake[1]);
-        signal(SIGINT, SIG_DFL); signal(SIGTERM, SIG_DFL); signal(SIGHUP, SIG_DFL);
+        if (!resetTerminalSignals()) { const char msg[]="terlox: cannot initialize process signals\r\n"; ::write(2,msg,sizeof(msg)-1); _exit(126); }
         if (!cwd.isEmpty() && chdir(cwd.constData())) { const char msg[] = "terlox: cannot enter working directory\r\n"; ::write(2, msg, sizeof(msg)-1); _exit(126); }
         execve(argv[0], argv.data(),envp.data()); const char msg[] = "terlox: exec failed\r\n"; ::write(2, msg, sizeof(msg)-1); _exit(127);
     }
@@ -69,9 +70,11 @@ bool Process::start(const LaunchOptions& o, QString& error) {
         }
     });
     d->waiter = std::thread([this] {
-        int status = 0; while (waitpid(d->child, &status, 0) < 0 && errno == EINTR) {}
+        int status = 0; pid_t waited;
+        do { waited=waitpid(d->child,&status,0); } while (waited<0 && errno==EINTR);
         kill(-d->child, SIGHUP); d->ended = true; const char wake = 0; ::write(d->wake[1], &wake, 1);
-        const int code = WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
+        const int code = waited<0 ? 125 : WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
+        if (d->io.joinable()) d->io.join();
         QMetaObject::invokeMethod(this, [this, code] { emit exited(code); });
     });
     return true;

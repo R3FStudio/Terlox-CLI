@@ -69,6 +69,11 @@ UI thread mutates `Screen`; worker threads do not draw directly into widgets.
 Windows creates the child suspended, assigns it to a kill-on-close process job,
 then resumes it. Separate reader/writer workers keep a full pipe from freezing
 input. On POSIX, a poll worker services the PTY and a waiter reaps the child.
+The backend resets inherited terminal signals and drains queued output before
+announcing that the session exited. The standalone shell also resets its startup
+signals so it can wait for child processes reliably. `shell/runtime/TerminalState.cpp`
+restores terminal modes and foreground ownership after commands, including failed
+or interrupted commands that leave the terminal changed.
 Detached processes can outlive the session. Complete shell job control is not
 implemented.
 

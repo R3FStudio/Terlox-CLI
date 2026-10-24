@@ -1,6 +1,7 @@
 add_library(terlox_shell STATIC
   parsing/Parser.cpp parsing/Expansion.cpp
   runtime/Builtins.cpp runtime/Help.h runtime/Help.cpp runtime/Executor.cpp runtime/NativeShell.cpp
+  runtime/TerminalState.h runtime/TerminalState.cpp
   editing/History.cpp editing/Completion.cpp editing/LineEditor.cpp editing/Layout.cpp editing/InputState.h editing/InputState.cpp)
 target_include_directories(terlox_shell PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(terlox_shell PUBLIC Qt6::Core terlox_information terlox_elevation terlox_defaults terlox_updates)

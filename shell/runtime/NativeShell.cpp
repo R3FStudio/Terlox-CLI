@@ -1,4 +1,5 @@
 #include "NativeShell.h"
+#include "TerminalState.h"
 #include "Builtins.h"
 #include "shell/parsing/Parser.h"
 #include "platform/Elevation.h"
@@ -20,6 +21,10 @@ static QString powershell() {
 
 #endif
 static int wait(QProcess& p) {
+    TerminalState terminalState;
+#ifndef Q_OS_WIN
+    p.setUnixProcessParameters(QProcess::UnixProcessFlag::ResetSignalHandlers);
+#endif
     p.setProcessChannelMode(QProcess::ForwardedChannels); p.setInputChannelMode(QProcess::ForwardedInputChannel);
     p.start();
     if (!p.waitForStarted()) { std::cerr << "terloxsh: " << p.errorString().toUtf8().constData() << '\n'; return 127; }
