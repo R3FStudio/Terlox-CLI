@@ -20,7 +20,11 @@ namespace terlox::updates {
 Service::Service(QObject* parent):QObject(parent) {
     token_=QUuid::createUuid().toByteArray(QUuid::WithoutBraces)+QUuid::createUuid().toByteArray(QUuid::WithoutBraces);
     server_.setSocketOptions(QLocalServer::UserAccessOption);
-    const auto name="terlox-update-"+QUuid::createUuid().toString(QUuid::WithoutBraces);
+    auto name="terlox-update-"+QUuid::createUuid().toString(QUuid::WithoutBraces);
+#ifndef Q_OS_WIN
+    // macOS per-user temporary paths can exceed sockaddr_un's path limit.
+    name=QDir("/tmp").filePath(name);
+#endif
     if (!server_.listen(name)) { qunsetenv("TERLOX_UPDATE_ENDPOINT"); qunsetenv("TERLOX_UPDATE_TOKEN"); return; }
     qputenv("TERLOX_UPDATE_ENDPOINT",server_.fullServerName().toUtf8()); qputenv("TERLOX_UPDATE_TOKEN",token_);
     connect(&server_,&QLocalServer::newConnection,this,[this] {

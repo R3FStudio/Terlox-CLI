@@ -98,7 +98,7 @@ private slots:
         });
         Service service; QSignalSpy restart(&service,&Service::restartRequested);
         QLocalSocket client; client.connectToServer(qEnvironmentVariable("TERLOX_UPDATE_ENDPOINT"));
-        QVERIFY(client.waitForConnected());
+        QVERIFY2(client.waitForConnected(),qPrintable(client.errorString()));
         client.write("{\"action\":\"install\",\"token\":\"wrong-token\"}\n"); client.flush();
         QTRY_COMPARE(client.state(),QLocalSocket::UnconnectedState);
         QVERIFY(restart.isEmpty());
