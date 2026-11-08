@@ -61,6 +61,18 @@ private slots:
 #endif
     void parsing() { auto p = terlox::shell::parse("echo \"two words\" '' a\\ b | other > output"); QVERIFY(p.error.isEmpty()); QCOMPARE(p.program[0].size(), size_t(2)); QCOMPARE(p.program[0][0].arguments, QStringList({"echo","two words","","a b"})); QCOMPARE(p.program[0][1].output, "output"); }
     void malformed() { QVERIFY(!terlox::shell::parse("echo '").error.isEmpty()); QVERIFY(!terlox::shell::parse("echo |").error.isEmpty()); QVERIFY(!terlox::shell::parse("echo >").error.isEmpty()); }
+#ifndef Q_OS_WIN
+    void unixEscapes() {
+        const auto p=terlox::shell::parse("\\. \"$HOME/.nvm/nvm.sh\"");
+        QVERIFY(p.error.isEmpty()); QCOMPARE(p.program[0][0].arguments[0],QString("."));
+        const auto words=terlox::shell::parse("echo \\a \\#literal \"\\.\" \\\ncontinued");
+        QVERIFY(words.error.isEmpty());
+        QCOMPARE(words.program[0][0].arguments,QStringList({"echo","a","#literal","\\.","continued"}));
+        const auto continuation=terlox::shell::parse("echo \\\n");
+        QVERIFY(continuation.error.isEmpty());
+        QCOMPARE(continuation.program[0][0].arguments,QStringList({"echo"}));
+    }
+#endif
     void expansion() { qputenv("TERLOX_TEST", "works"); auto p = terlox::shell::parse("echo '$TERLOX_TEST' \"${TERLOX_TEST}\" $?", 7); QCOMPARE(p.program[0][0].arguments, QStringList({"echo","$TERLOX_TEST","works","7"})); }
     void history() { terlox::shell::History h; h.add("one"); h.add("two"); h.add("two"); QCOMPARE(h.entries().size(), 2); QCOMPARE(h.previous("draft"), "two"); QCOMPARE(h.previous(""), "one"); QCOMPARE(h.next(), "two"); QCOMPARE(h.next(), "draft"); }
     void screen() { terlox::Screen s(3, 10); s.feed("hello\033[2;3HX"); QCOMPARE(s.text(0,0,4), "hello"); QCOMPARE(s.text(1,2,2), "X"); s.feed("\033[2J"); QCOMPARE(s.text(0,0,9), ""); }

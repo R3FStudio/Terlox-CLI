@@ -18,6 +18,22 @@ class NativeShellTests : public QObject {
 #endif
     }
 private slots:
+#ifndef Q_OS_WIN
+    void sourceExplainsNativeShell_data() {
+        QTest::addColumn<QString>("command");
+        QTest::newRow("dot") << QString(". \"$HOME/.nvm/nvm.sh\"");
+        QTest::newRow("escaped-dot") << QString("\\. \"$HOME/.nvm/nvm.sh\"");
+        QTest::newRow("source") << QString("source \"$HOME/.nvm/nvm.sh\"");
+    }
+    void sourceExplainsNativeShell() {
+        QFETCH(QString,command);
+        QProcess p; p.start(shell(),{"-c",command}); QVERIFY(p.waitForFinished(10000));
+        QCOMPARE(p.exitCode(),2);
+        const auto error=p.readAllStandardError();
+        QVERIFY(error.contains("native shell")); QVERIFY(error.contains("source \"$HOME/.nvm/nvm.sh\""));
+        QVERIFY(!error.contains("execve"));
+    }
+#endif
     void commandAndStay() {
         QProcess p; p.start(shell(),{"--command-and-stay","echo before-elevation-session"}); QVERIFY(p.waitForStarted());
         p.write("echo after-elevation-session\nexit 19\n"); p.closeWriteChannel();

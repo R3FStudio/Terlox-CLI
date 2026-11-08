@@ -35,6 +35,14 @@ void Store::addProfile(const Profile& p) {
     array.append(QJsonObject{{"name", p.name}, {"executable", p.launch.executable}, {"arguments", QJsonArray::fromStringList(p.launch.arguments)}, {"directory", p.launch.directory}});
     settings_.setValue("profiles/custom", QJsonDocument(array).toJson(QJsonDocument::Compact));
 }
-QString Store::defaultProfile() const { return settings_.value("profiles/default", "Terlox shell").toString(); }
+QString Store::defaultProfile() const {
+#ifdef Q_OS_WIN
+    const auto fallback=QStringLiteral("Terlox shell");
+#else
+    // An unset preference selects the first discovered native profile.
+    const auto fallback=QString();
+#endif
+    return settings_.value("profiles/default",fallback).toString();
+}
 void Store::setDefaultProfile(const QString& name) { settings_.setValue("profiles/default", name); }
 }

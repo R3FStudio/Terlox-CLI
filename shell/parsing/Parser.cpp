@@ -29,9 +29,19 @@ ParseResult parse(const QString& line, int status) {
 #endif
                 if (i + 1 == line.size()) throw QString("trailing escape");
                 const auto next = line[i + 1];
+#ifdef Q_OS_WIN
                 // Preserve ordinary Windows path separators; escape shell metacharacters.
                 if (QString("\\\"' $|;<>\t").contains(next)) { word += next; ++i; }
                 else word += c;
+#else
+                // Outside quotes a backslash quotes any character, including
+                // the dot in installers' common `\. file` spelling.
+                if (quote.isNull() || QString("\\\"$`\n").contains(next)) {
+                    if (next=='\n') { ++i; continue; }
+                    word+=next;
+                    ++i;
+                } else word+=c;
+#endif
                 started = true; continue;
             }
             if (!quote.isNull()) {

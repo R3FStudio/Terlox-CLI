@@ -18,7 +18,9 @@ QList<Profile> discoverProfiles(const QString& appDir) {
     const auto integrated = appDir + "/terloxsh";
     const QStringList names{"bash", "zsh", "fish", "sh"};
 #endif
+#ifdef Q_OS_WIN
     if (QFileInfo::exists(integrated)) out << Profile{"Terlox shell", {integrated, {}, defaultWorkingDirectory()}};
+#endif
     for (const auto& n : names) {
         auto exe = QStandardPaths::findExecutable(n);
 #ifdef Q_OS_WIN
@@ -35,6 +37,19 @@ QList<Profile> discoverProfiles(const QString& appDir) {
         }
         out << Profile{n, {exe, args, defaultWorkingDirectory()}};
     }
+#ifndef Q_OS_WIN
+    // Native startup files and shell functions (for example nvm) belong to
+    // one persistent native shell, rather than terloxsh's command interpreter.
+    const auto preferred=QFileInfo(qEnvironmentVariable("SHELL")).canonicalFilePath();
+    if (!preferred.isEmpty()) {
+        for (qsizetype i=0;i<out.size();++i) {
+            if (QFileInfo(out[i].launch.executable).canonicalFilePath()==preferred) {
+                out.move(i,0); break;
+            }
+        }
+    }
+    if (QFileInfo::exists(integrated)) out << Profile{"Terlox shell", {integrated, {}, defaultWorkingDirectory()}};
+#endif
     return out;
 }
 }

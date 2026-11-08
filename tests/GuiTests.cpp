@@ -41,6 +41,9 @@ private slots:
         QSettings::setDefaultFormat(QSettings::IniFormat);
         QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,configDirectory_.path());
         QCoreApplication::setOrganizationName("TerloxTests"); QCoreApplication::setApplicationName("TerloxTests");
+        // These UI tests exercise terloxsh's prompt and line editor. Native
+        // default selection and startup files are covered by ProfileTests.
+        Store().setDefaultProfile("Terlox shell");
     }
     void launchFocusDoesNotPinOrRestoreMinimizedWindow() {
         if (QGuiApplication::platformName()=="offscreen") QSKIP("Needs a desktop window manager");

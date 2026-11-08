@@ -87,6 +87,14 @@ int runApplication(int argc, char** argv) {
         if (!error.isEmpty()) { std::cerr << error.toStdString() << '\n'; return 4; }
     }
     if (!initialProfile && !executionRequested && parser.isSet(directory)) {
+#ifndef Q_OS_WIN
+        Store store;
+        const auto profiles=store.profiles(QCoreApplication::applicationDirPath());
+        const auto selected=parser.isSet(profile)?parser.value(profile):store.defaultProfile();
+        if (!profiles.isEmpty()) initialProfile=profiles.first();
+        for (const auto& candidate:profiles) if (candidate.name==selected) { initialProfile=candidate; break; }
+        if (initialProfile) initialProfile->launch.directory=parser.value(directory).isEmpty()?defaultWorkingDirectory():parser.value(directory);
+#else
         QStringList args;
         auto cwd=parser.value(directory); if (cwd.isEmpty()) cwd=defaultWorkingDirectory();
         initialProfile=Profile{isAdministrator()?"Administrator":"Terlox shell",{QCoreApplication::applicationDirPath()+
@@ -96,6 +104,7 @@ int runApplication(int argc, char** argv) {
             "/terloxsh"
 #endif
             ,args,cwd}};
+#endif
     }
     Window window(parser.value(profile),nullptr,initialProfile?&*initialProfile:nullptr);
     if (parser.isSet(diagnostics)) {

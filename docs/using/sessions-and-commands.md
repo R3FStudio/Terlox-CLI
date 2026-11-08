@@ -15,6 +15,10 @@ Right-click and open **New session**. The list contains shells found on your
 computer, plus any profiles you added. A profile is just a saved choice of shell,
 arguments and starting folder.
 
+On Linux and macOS, new installations start an installed native shell. Terlox
+prefers your `SHELL` when it matches a discovered profile, then falls back to
+Bash, Zsh, Fish or sh. An explicitly saved default still takes precedence.
+
 Use **PowerShell** for PowerShell scripts, modules and aliases. Use **Command
 Prompt** for CMD scripts. On Linux or macOS, choose your usual Bash, Zsh or Fish
 session. Their normal startup files provide aliases, functions and shell setup.

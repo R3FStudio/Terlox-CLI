@@ -32,6 +32,23 @@ script needs Bash. Choose a native shell profile for its scripting language.
 If an executable such as Git is missing, check that it is installed and on PATH.
 Open a new session after changing PATH. [More about shells](../using/sessions-and-commands.md).
 
+## nvm installed but its command is missing
+
+nvm is a shell function loaded by Bash, Zsh or another supported POSIX shell.
+The included **Terlox shell** does not implement those shell functions. Choose
+**New session > bash**, or type `bash` in the current session, then run:
+
+```bash
+source "$HOME/.nvm/nvm.sh"
+nvm install 26
+node --version
+```
+
+To use Bash for future sessions, type `/terlox default-shell "bash"` at a
+prompt. New Unix installations use a native shell automatically; existing saved
+preferences are kept. The nvm installer adds its startup lines to your shell's
+configuration, so subsequent Bash sessions should load it automatically.
+
 ## DiskPart or another tool needs administrator rights
 
 The included Windows shell requests UAC for a standalone program whose manifest

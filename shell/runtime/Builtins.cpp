@@ -16,9 +16,23 @@ static QString builtinName(QString n) {
 #endif
     return n;
 }
-bool isBuiltin(const QString& n) { return QStringList{"cd","pwd","echo","clear","exit","export","set","unset","env","history","help","/info-terlox","terlox-default","terlox-update"}.contains(builtinName(n)); }
+bool isBuiltin(const QString& n) {
+#ifndef Q_OS_WIN
+    if (n=="." || n=="source") return true;
+#endif
+    return QStringList{"cd","pwd","echo","clear","exit","export","set","unset","env","history","help","/info-terlox","terlox-default","terlox-update"}.contains(builtinName(n));
+}
 int builtin(const QStringList& a, ShellState& state) {
     const auto n = builtinName(a[0]);
+#ifndef Q_OS_WIN
+    if (n=="." || n=="source") {
+        std::cerr << "terloxsh: " << n.toStdString() << ": shell scripts and functions need a native shell.\n"
+                     "Open New session > bash (or run bash here), then source the file there.\n"
+                     "For nvm: source \"$HOME/.nvm/nvm.sh\"\n"
+                     "Use /terlox default-shell \"bash\" for future sessions.\n";
+        return 2;
+    }
+#endif
     if (n=="help") { std::cout << shellHelp().toUtf8().constData(); return 0; }
     if (n=="terlox-update") return updateCommand(a.mid(1));
     if (n=="terlox-default") return defaultTerminalCommand(a.mid(1),QCoreApplication::applicationDirPath()+
