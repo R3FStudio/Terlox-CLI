@@ -1,7 +1,10 @@
 #include "Releases.h"
 namespace terlox {
 QString releaseHistory() {
-    return "1.0.2 - confirmed in-terminal updates, verified package downloads, native\n"
+    return "1.0.3 - resilient package downloads; native Unix defaults; built-in fetch\n"
+           "        and version stats; full clear; bounded output/scrollback; smoother resize\n"
+           "        and native clipboard shortcuts.\n"
+           "1.0.2 - confirmed in-terminal updates, verified package downloads, native\n"
            "        installation and automatic restart.\n"
            "1.0.1 - reset inherited Unix process signals, restore terminal modes after\n"
            "        child commands, and deliver final PTY output before session exit.\n"

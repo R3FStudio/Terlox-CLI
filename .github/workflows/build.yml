@@ -45,6 +45,11 @@ jobs:
       - name: Linux dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxcb-cursor0 libfontconfig1 vim dpkg-dev file patchelf desktop-file-utils
+      - name: Cache verified packaging tools
+        uses: actions/cache@v4
+        with:
+          path: .tools/package-tools
+          key: package-tools-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('installer/packaging/tools.json') }}
       - name: Configure
         run: cmake --preset release
       - name: Build
@@ -55,6 +60,7 @@ jobs:
           python tests/Check-Docs.py
           python tests/ContributionTests.py
           python tests/ReleaseCommandsTests.py
+          python tests/PackageToolTests.py
       - name: Workflow cancellation checks
         if: runner.os == 'Linux'
         run: node --test tests/CancelSuperseded.test.cjs

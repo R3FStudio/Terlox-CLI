@@ -12,8 +12,10 @@ TerminalView::TerminalView(Screen* screen, const Appearance& a, QWidget* parent)
     setFocusPolicy(Qt::StrongFocus); setAttribute(Qt::WA_InputMethodEnabled); setAttribute(Qt::WA_TranslucentBackground);
     setMouseTracking(true); setCursor(Qt::IBeamCursor);
     initializeScrollBar();
-    setAccessibleName("Terminal"); setAccessibleDescription("Terminal session. Control A selects all; Control C copies selected text; Control V pastes. Drag to select text. The blank top strip moves the window. Shift and drag overrides application mouse input. Click focuses typing.");
+    setAccessibleName("Terminal"); setAccessibleDescription("Terminal session. Platform clipboard shortcuts select all, copy and paste. Drag to select text. The blank top strip moves the window. Shift and drag overrides application mouse input. Click focuses typing.");
     refresh_.setSingleShot(true); refresh_.setInterval(8);
+    gridResize_.setSingleShot(true); gridResize_.setInterval(16);
+    connect(&gridResize_,&QTimer::timeout,this,[this] { updateGrid(); refreshScene(); });
     progressAnimation_.setStartValue(0.); progressAnimation_.setEndValue(1.);
     progressAnimation_.setDuration(1200); progressAnimation_.setLoopCount(-1);
     connect(&progressAnimation_,&QVariantAnimation::valueChanged,this,[this] { refreshScene(); });
@@ -39,8 +41,21 @@ void TerminalView::applyEffectiveAppearance() { auto a=baseAppearance_;
     cellWidth_=std::ceil(m.horizontalAdvance('0')*dpr)/dpr;
     cellHeight_=std::ceil(m.height()*dpr)/dpr; ascent_=std::round(m.ascent()*dpr)/dpr;
     updateGrid(); refreshScene(); }
-void TerminalView::updateGrid() { const int rows=std::max(1,int(height()/cellHeight_)),columns=std::max(1,int(std::max(1,width()-ScrollGutter)/cellWidth_)); emit gridChanged(rows,columns); if (aboutScreen_) { aboutScreen_->resize(rows,columns); renderAbout(); } }
-void TerminalView::resizeEvent(QResizeEvent* e) { QQuickWidget::resizeEvent(e); hasSelection_ = false; updateGrid(); refreshScene(); }
+void TerminalView::updateGrid() {
+    const int rows=std::clamp(int(height()/cellHeight_),1,512),columns=std::clamp(int(std::max(1,width()-ScrollGutter)/cellWidth_),1,2048);
+    if (rows!=screen_->rows() || columns!=screen_->columns()) emit gridChanged(rows,columns);
+    if (aboutScreen_) { aboutScreen_->resize(rows,columns); renderAbout(); }
+}
+void TerminalView::resizeEvent(QResizeEvent* e) {
+    QQuickWidget::resizeEvent(e); hasSelection_=false;
+    if (!gridResize_.isActive()) gridResize_.start();
+    if (!refresh_.isActive()) refresh_.start();
+}
+void TerminalView::clearTerminal() {
+    if (aboutScreen_) closeAbout();
+    hasSelection_=false; resetScrollback(); typedCommand_.clear(); commandTracking_=true;
+    screen_->clear(); refreshScene();
+}
 void TerminalView::focusInEvent(QFocusEvent* e) { QQuickWidget::focusInEvent(e); screen_->focus(true); cursorOn_=true; refreshScene(); }
 void TerminalView::focusOutEvent(QFocusEvent* e) { QQuickWidget::focusOutEvent(e); screen_->focus(false); refreshScene(); }
 QString TerminalView::rendererDescription() const { return graphicsDescription(quickWindow()); }

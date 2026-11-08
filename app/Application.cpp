@@ -3,6 +3,7 @@
 #include "LaunchArguments.h"
 #include "window/Window.h"
 #include "information/Version.h"
+#include "information/System.h"
 #include "renderer/GraphicsBackend.h"
 #include "platform/Elevation.h"
 #include "platform/Environment.h"
@@ -28,8 +29,28 @@
 #include <QQuickWindow>
 #include <iostream>
 #include <optional>
+#ifdef Q_OS_WIN
+#include <windows.h>
+#include <cstdio>
+#endif
 namespace terlox {
 int runApplication(int argc, char** argv) {
+    // These CLI queries also work over SSH and without a desktop/display server.
+    if (argc==2 && (QByteArray(argv[1])=="--version" || QByteArray(argv[1])=="-v" || QByteArray(argv[1])=="clear")) {
+#ifdef Q_OS_WIN
+        // The GUI subsystem has no console by default; retain redirected output
+        // and attach to the invoking console only when stdout is absent.
+        if (GetFileType(GetStdHandle(STD_OUTPUT_HANDLE))==FILE_TYPE_UNKNOWN && AttachConsole(ATTACH_PARENT_PROCESS)) {
+            FILE* stream=nullptr; freopen_s(&stream,"CONOUT$","w",stdout);
+        }
+        const auto output=GetStdHandle(STD_OUTPUT_HANDLE); DWORD mode=0;
+        if (GetConsoleMode(output,&mode)) SetConsoleMode(output,mode|ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+#endif
+        QCoreApplication cli(argc,argv);
+        if (QByteArray(argv[1])=="clear") std::cout << "\033[3J\033[2J\033[H" << std::flush;
+        else std::cout << systemSummary().toUtf8().constData();
+        return 0;
+    }
     configureGraphics();
     importTerminalEnvironment();
     QApplication app(argc, argv); app.setApplicationName("Terlox"); app.setOrganizationName("Terlox"); app.setApplicationVersion(TERLOX_VERSION);

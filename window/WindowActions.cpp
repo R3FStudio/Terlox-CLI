@@ -35,8 +35,17 @@ void Window::installShortcuts() {
     }
 }
 void Window::showMenu(const QPoint& pos) {
-    AnimatedMenu menu(this); menu.setObjectName("terminalContextMenu"); menu.addAction("Copy\tCtrl+C", this, [this] { if (current()) current()->copy(); });
-    menu.addAction("Paste\tCtrl+V", this, [this] { if (current()) current()->paste(); });
+    AnimatedMenu menu(this); menu.setObjectName("terminalContextMenu");
+#ifdef Q_OS_MACOS
+    const auto copyKeys=QString("Cmd+C"), pasteKeys=QString("Cmd+V");
+#elif defined(Q_OS_WIN)
+    const auto copyKeys=QString("Ctrl+C"), pasteKeys=QString("Ctrl+V");
+#else
+    const auto copyKeys=QString("Ctrl+Shift+C"), pasteKeys=QString("Ctrl+Shift+V");
+#endif
+    menu.addAction("Copy\t"+copyKeys, this, [this] { if (current()) current()->copy(); });
+    menu.addAction("Paste\t"+pasteKeys, this, [this] { if (current()) current()->paste(); });
+    menu.addAction("Clear terminal",this,[this] { if (current()) current()->clearTerminal(); });
     menu.addSeparator();
     auto* zoom=new ZoomControls(&menu);
     auto* zoomAction=new QWidgetAction(&menu); zoomAction->setDefaultWidget(zoom); menu.addAction(zoomAction);

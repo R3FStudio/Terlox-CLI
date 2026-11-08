@@ -4,11 +4,18 @@
 #include <QInputMethodEvent>
 #include <QWindow>
 #include <QApplication>
+#include <QKeySequence>
 namespace terlox {
 void TerminalView::clearApplicationCommand() {
     // In-band clearing preserves input queued after a local terminal command.
     const auto key=screen_->editableInput().active()?Qt::Key_U:Qt::Key_C;
-    QKeyEvent cancel(QEvent::KeyPress,key,Qt::ControlModifier); screen_->key(&cancel);
+    QKeyEvent cancel(QEvent::KeyPress,key,
+#ifdef Q_OS_MACOS
+        Qt::MetaModifier
+#else
+        Qt::ControlModifier
+#endif
+    ); screen_->key(&cancel);
 }
 void TerminalView::keyPressEvent(QKeyEvent* e) {
     if (e->key()==Qt::Key_Control || e->key()==Qt::Key_Shift || e->key()==Qt::Key_Alt || e->key()==Qt::Key_Meta || e->key()==Qt::Key_AltGr) { e->accept(); return; }
@@ -17,18 +24,37 @@ void TerminalView::keyPressEvent(QKeyEvent* e) {
     }
     if (e->modifiers()==(Qt::ControlModifier|Qt::AltModifier) && (e->key()==Qt::Key_A || e->key()==Qt::Key_C || e->key()==Qt::Key_V)) {
         hasSelection_=false; resetScrollback(); typedCommand_.clear(); commandTracking_=e->key()==Qt::Key_C;
-        QKeyEvent native(QEvent::KeyPress,e->key(),Qt::ControlModifier); screen_->key(&native); e->accept(); return;
+        QKeyEvent native(QEvent::KeyPress,e->key(),
+#ifdef Q_OS_MACOS
+            Qt::MetaModifier
+#else
+            Qt::ControlModifier
+#endif
+        ); screen_->key(&native); e->accept(); return;
     }
+#if defined(Q_OS_MACOS)
+    if (e->matches(QKeySequence::SelectAll)) { selectAll(); e->accept(); return; }
+    if (e->matches(QKeySequence::Copy)) { copy(); e->accept(); return; }
+    if (e->matches(QKeySequence::Paste)) { paste(); e->accept(); return; }
+#elif defined(Q_OS_WIN)
     if (e->modifiers()==Qt::ControlModifier) {
         if (e->key()==Qt::Key_A) { selectAll(); e->accept(); return; }
         if (e->key()==Qt::Key_C && hasSelection_) { copy(); e->accept(); return; }
         if (e->key()==Qt::Key_V) { paste(); e->accept(); return; }
     }
+#else
+    if (e->modifiers()==(Qt::ControlModifier|Qt::ShiftModifier) && e->key()==Qt::Key_A) { selectAll(); e->accept(); return; }
+#endif
+    if (e->key()==Qt::Key_Insert && e->modifiers()==Qt::ShiftModifier) { paste(); e->accept(); return; }
+    if (e->key()==Qt::Key_Insert && e->modifiers()==Qt::ControlModifier) { copy(); e->accept(); return; }
     if (aboutKey(e)) { e->accept(); return; }
     if (hasSelection_ && (e->key()==Qt::Key_Backspace || e->key()==Qt::Key_Delete) && e->modifiers()==Qt::NoModifier) {
         deleteSelectedInput(); e->accept(); return;
     }
     const auto command=typedCommand_.trimmed();
+    if (!screen_->alternate() && (e->key()==Qt::Key_Return || e->key()==Qt::Key_Enter) && commandTracking_ && (command=="terlox clear" || command=="/terlox clear")) {
+        clearApplicationCommand(); clearTerminal(); e->accept(); return;
+    }
     if (!screen_->alternate() && (e->key()==Qt::Key_Return || e->key()==Qt::Key_Enter) && commandTracking_
         && (command=="/terlox" || command.startsWith("/terlox ") || command=="/admin" || command.startsWith("/admin "))) {
         typedCommand_.clear(); commandTracking_=true;
@@ -46,9 +72,14 @@ void TerminalView::keyPressEvent(QKeyEvent* e) {
     if (e->modifiers() == Qt::ShiftModifier && (e->key() == Qt::Key_PageUp || e->key() == Qt::Key_PageDown)) {
         scrollTo(scrollTarget_+(e->key()==Qt::Key_PageUp?1:-1)*screen_->rows()); return;
     }
-    if (e->key()==Qt::Key_Return || e->key()==Qt::Key_Enter || (e->modifiers()==Qt::ControlModifier && (e->key()==Qt::Key_C || (e->key()==Qt::Key_U && screen_->editableInput().active())))) { typedCommand_.clear(); commandTracking_=true; }
+#ifdef Q_OS_MACOS
+    const auto terminalControl=Qt::MetaModifier;
+#else
+    const auto terminalControl=Qt::ControlModifier;
+#endif
+    if (e->key()==Qt::Key_Return || e->key()==Qt::Key_Enter || (e->modifiers()==terminalControl && (e->key()==Qt::Key_C || (e->key()==Qt::Key_U && screen_->editableInput().active())))) { typedCommand_.clear(); commandTracking_=true; }
     else if (e->key()==Qt::Key_Backspace && commandTracking_) { if (!typedCommand_.isEmpty()) typedCommand_.chop(1); }
-    else if (e->key()==Qt::Key_Escape || e->key()==Qt::Key_Up || e->key()==Qt::Key_Down || e->key()==Qt::Key_Left || e->key()==Qt::Key_Right || e->key()==Qt::Key_Home || e->key()==Qt::Key_End || e->key()==Qt::Key_Delete || e->modifiers().testFlag(Qt::ControlModifier)) commandTracking_=false;
+    else if (e->key()==Qt::Key_Escape || e->key()==Qt::Key_Up || e->key()==Qt::Key_Down || e->key()==Qt::Key_Left || e->key()==Qt::Key_Right || e->key()==Qt::Key_Home || e->key()==Qt::Key_End || e->key()==Qt::Key_Delete || e->modifiers().testFlag(terminalControl)) commandTracking_=false;
     else if (commandTracking_) typedCommand_+=e->text();
     hasSelection_ = false; resetScrollback(); cursorOn_ = true; blink_.start(); screen_->key(e); refreshScene();
 }

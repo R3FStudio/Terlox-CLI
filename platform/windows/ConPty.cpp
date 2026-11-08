@@ -26,6 +26,7 @@ struct Process::Impl {
     std::thread reader, writer, waiter;
     std::mutex queueMutex, consoleMutex;
     std::condition_variable ready; std::deque<QByteArray> queue;
+    std::optional<COORD> pendingSize;
     std::atomic<bool> stopping{false};
 };
 Process::Process(QObject* parent) : QObject(parent), d(std::make_unique<Impl>()) {}
@@ -88,14 +89,25 @@ void Process::startIo() {
         char buffer[32768]; DWORD count;
         while (ReadFile(d->output.value, buffer, sizeof(buffer), &count, nullptr) && count) {
             const QByteArray bytes(buffer, count);
-            QMetaObject::invokeMethod(this, [this, bytes] { emit received(bytes); }, Qt::QueuedConnection);
+            // During shutdown keep draining the pipe: ClosePseudoConsole can
+            // wait for its final output even after the client was terminated.
+            queueOutput(bytes);
         }
     });
     d->writer = std::thread([this] {
         for (;;) {
-            QByteArray bytes;
-            { std::unique_lock lock(d->queueMutex); d->ready.wait(lock, [this] { return d->stopping || !d->queue.empty(); });
-              if (d->stopping) return; bytes = std::move(d->queue.front()); d->queue.pop_front(); }
+            QByteArray bytes; std::optional<COORD> size;
+            { std::unique_lock lock(d->queueMutex); d->ready.wait(lock, [this] { return d->stopping || !d->queue.empty() || d->pendingSize.has_value(); });
+              if (d->stopping) return;
+              size=d->pendingSize; d->pendingSize.reset();
+              if (!d->queue.empty()) { bytes=std::move(d->queue.front()); d->queue.pop_front(); } }
+            if (size) {
+                std::lock_guard lock(d->consoleMutex);
+                if (d->console) {
+                    if (d->packagedConsole) ConptyApi::instance().resize(d->console,*size);
+                    else ResizePseudoConsole(d->console,*size);
+                }
+            }
             qsizetype offset = 0;
             while (offset < bytes.size() && !d->stopping) { DWORD written = 0; if (!WriteFile(d->input.value, bytes.constData() + offset, DWORD(bytes.size() - offset), &written, nullptr) || !written) return; offset += written; }
         }
@@ -108,17 +120,23 @@ void Process::startIo() {
         { std::lock_guard lock(d->consoleMutex); console = d->console; d->console = nullptr; }
         if (console) { if (d->packagedConsole) ConptyApi::instance().close(console); else ClosePseudoConsole(console); } // Reader keeps draining during teardown.
         if (d->reader.joinable()) d->reader.join();
-        QMetaObject::invokeMethod(this, [this, code] { emit exited(int(code)); }, Qt::QueuedConnection);
+        finishOutput(int(code));
     });
 }
 void Process::write(const QByteArray& bytes) {
     { std::lock_guard lock(d->queueMutex); if (d->stopping) return; d->queue.push_back(bytes); } d->ready.notify_one();
 }
-void Process::resize(int rows, int columns) { std::lock_guard lock(d->consoleMutex); if (d->console) { if (d->packagedConsole) ConptyApi::instance().resize(d->console,{SHORT(columns),SHORT(rows)}); else ResizePseudoConsole(d->console, {SHORT(columns), SHORT(rows)}); } }
+void Process::resize(int rows, int columns) {
+    // ConPTY resizing can wait for the console host. Never block the UI thread
+    // (which also drains output) while that native operation is in progress.
+    { std::lock_guard lock(d->queueMutex); d->pendingSize=COORD{SHORT(columns),SHORT(rows)}; }
+    d->ready.notify_one();
+}
 void Process::stop() {
+    stopOutput();
     d->stopping = true; d->ready.notify_all();
-    if (d->writer.joinable()) { CancelSynchronousIo(d->writer.native_handle()); d->writer.join(); }
     if (d->job.value) TerminateJobObject(d->job.value, 0);
+    if (d->writer.joinable()) { CancelSynchronousIo(d->writer.native_handle()); d->writer.join(); }
     if (d->inbound) {
         HPCON console;
         { std::lock_guard lock(d->consoleMutex); console=d->console; d->console=nullptr; }

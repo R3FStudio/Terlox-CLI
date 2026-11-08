@@ -4,6 +4,7 @@ namespace terlox {
 QString customizationHelp() {
     return "About Terlox                    Interactive terminal About/help app\n"
            "/terlox                         Show current settings\n"
+           "terlox clear                    Clear current terminal and scrollback\n"
            "/terlox update                  Check the latest public Terlox release\n"
            "/terlox blur 0.85               Native background blur (0..1; 0 disables)\n"
            "/terlox effects on|off          Native acrylic/vibrancy effects\n"

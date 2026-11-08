@@ -35,6 +35,31 @@ class ProcessTests : public QObject {
     }
     static QString content(Screen& s) { QStringList lines; for (int row = 0; row < s.rows(); ++row) lines << s.text(row,0,s.columns()-1); return lines.join('\n'); }
 private slots:
+    void largeOutputIsLosslessAndKeepsEventLoopAlive() {
+        Process process; QString error; qint64 count=0; QByteArray tail; int ticks=0;
+        Screen screen(24,80);
+#ifdef Q_OS_WIN
+        connect(&process,&Process::received,&screen,&Screen::feed);
+#endif
+        QTimer pulse; pulse.setInterval(1); connect(&pulse,&QTimer::timeout,this,[&] { ++ticks; }); pulse.start();
+        connect(&process,&Process::received,this,[&](const QByteArray& bytes) { count+=bytes.size(); tail=(tail+bytes).right(32); });
+        QSignalSpy exited(&process,&Process::exited);
+        QVERIFY2(process.start({QCoreApplication::applicationFilePath(),{"--large-output-child"},QDir::tempPath(),24,80},error),qPrintable(error));
+        QTRY_COMPARE_WITH_TIMEOUT(exited.size(),1,20000);
+#ifdef Q_OS_WIN
+        // ConPTY serializes a console screen, rather than preserving raw bytes.
+        QVERIFY(count>0); QVERIFY(content(screen).contains("END-DATA"));
+#else
+        QCOMPARE(count,qint64(16*1024*1024+8)); QVERIFY(tail.endsWith("END-DATA"));
+#endif
+        QVERIFY(ticks>0);
+    }
+    void stopWhileOutputIsBackpressured() {
+        Process process; QString error;
+        QVERIFY2(process.start({QCoreApplication::applicationFilePath(),{"--large-output-child"},QDir::tempPath(),24,80},error),qPrintable(error));
+        // Deliberately do not drain Qt's event queue while the pipe fills.
+        QTest::qSleep(100); QElapsedTimer timer; timer.start(); process.stop(); QVERIFY(timer.elapsed()<5000);
+    }
 #ifndef Q_OS_WIN
     void standaloneShellRepairsInheritedSignals() {
         QProcess process;
@@ -377,6 +402,16 @@ private slots:
 int main(int argc,char** argv) {
     QCoreApplication app(argc,argv);
     if (const auto result=runUnixProcessFixture();result>=0) return result;
+    if (app.arguments().contains("--large-output-child")) {
+        const std::string chunk(32768,'x');
+#ifdef Q_OS_WIN
+        constexpr int chunks=32;
+#else
+        constexpr int chunks=512;
+#endif
+        for (int i=0;i<chunks;++i) std::cout << chunk;
+        std::cout << "END-DATA" << std::flush; return 0;
+    }
     if (app.arguments().contains("--final-output-child")) {
         std::cout << std::string(65536,'x') << "final-output-complete" << std::flush;
         return 23;

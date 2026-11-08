@@ -37,7 +37,18 @@ void Screen::feed(const QByteArray& b) {
     vterm_screen_flush_damage(screen_); feeding_=false;
     if (dirty_ && !synchronized_) { dirty_=false; emit changed(); }
 }
-void Screen::resize(int rows, int columns) { rows_ = std::max(1, rows); columns_ = std::max(1, columns); vterm_set_size(vt_, rows_, columns_); vterm_screen_flush_damage(screen_); emit changed(); }
+void Screen::resize(int rows, int columns) {
+    rows=std::clamp(rows,1,512); columns=std::clamp(columns,1,2048);
+    if (rows==rows_ && columns==columns_) return;
+    feeding_=true; rows_=rows; columns_=columns;
+    vterm_set_size(vt_,rows_,columns_); vterm_screen_flush_damage(screen_);
+    feeding_=false; dirty_=false; emit changed();
+}
+void Screen::clear() {
+    // Clear retained data too; ED 2 alone only clears the visible screen.
+    graphics_.clear(); history_.clear(); editableInput_={};
+    feed("\033[3J\033[2J\033[H");
+}
 VTermPos Screen::cursor() const { VTermPos p; vterm_state_get_cursorpos(vterm_obtain_state(vt_), &p); return p; }
 QColor Screen::color(VTermColor c) const { if (VTERM_COLOR_IS_DEFAULT_FG(&c)) return foreground_; if (VTERM_COLOR_IS_DEFAULT_BG(&c)) return background_; if (VTERM_COLOR_IS_INDEXED(&c) && palette_.contains(c.indexed.idx)) return palette_.value(c.indexed.idx); vterm_screen_convert_color_to_rgb(screen_, &c); return QColor(c.rgb.red, c.rgb.green, c.rgb.blue); }
 VTermScreenCell Screen::cell(int row, int col, int offset) const {

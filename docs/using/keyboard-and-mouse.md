@@ -17,19 +17,20 @@ dragging to select text instead, or **Shift + right-click** to open Terlox's men
 
 ## Copy and paste
 
-| Keys | Action |
-| --- | --- |
-| Ctrl+A | Select retained terminal text, including scrollback |
-| Ctrl+C | Copy selected text; without a selection, send an interrupt |
-| Ctrl+V | Paste the clipboard |
-| Ctrl+Shift+C / V | Alternative copy and paste shortcuts |
-| Ctrl+Alt+A / C / V | Send the raw Ctrl key to the CLI program |
+| Platform | Select all | Copy | Paste |
+| --- | --- | --- | --- |
+| Windows | Ctrl+A | Ctrl+C with a selection | Ctrl+V |
+| macOS | Command+A | Command+C | Command+V |
+| Linux | Ctrl+Shift+A | Ctrl+Shift+C or Ctrl+Insert | Ctrl+Shift+V or Shift+Insert |
 
-The raw-control shortcuts are useful when a CLI editor expects Ctrl+A or Ctrl+V
-for its own commands. Terminal clipboard shortcuts otherwise take priority.
+On Windows, Ctrl+C without a selection interrupts the command. On Linux, plain
+Ctrl+A/C/V belong to the shell. On macOS, physical Control keys belong to the
+shell, while Command handles clipboard actions. Ctrl+Shift+C/V remain available
+as additional shortcuts; Ctrl+Alt+A/C/V explicitly sends raw control keys.
+Bracketed paste is used when the running program requests it.
 
 In the included Terlox shell, Backspace or Delete removes selected text from
-the command being edited. Ctrl+A can also select the prompt and previous output;
+the command being edited. Select all can also include the prompt and previous output;
 those parts remain unchanged. Selecting only output or the prompt clears the
 selection without deleting anything. Native shells and CLI editors keep their
 own editing behavior.
@@ -59,8 +60,9 @@ the window closes.
 Scroll the wheel or use the slim right scrollbar to revisit output. It appears
 when there is retained history and stays hidden in alternate-screen programs.
 **Shift+PageUp / PageDown** moves a page through history. Typing returns to live
-output. Scrollback is limited by your configured history size.
+output. Scrollback is limited by your configured history size and a 32 MiB cell-storage
+budget per session. The oldest lines are discarded when either limit is reached.
+Use `terlox clear` or **Clear terminal** in the context menu to clear the display
+and retained history for the current session.
 
-On macOS, Qt displays Command/Option equivalents for actions in its shortcut
-catalog. The terminal's text-input overrides use the Ctrl combinations listed
-above; native macOS shortcut behavior still needs validation.
+On macOS, Qt displays Command/Option equivalents for window action shortcuts.

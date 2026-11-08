@@ -33,9 +33,10 @@ SceneItem::SceneItem(QQuickItem* parent):QQuickItem(parent) { setFlag(ItemHasCon
 void SceneItem::setFrame(Frame frame) { frame_=std::move(frame); setSize(frame_.size); update(); }
 QSGNode* SceneItem::updatePaintNode(QSGNode* previous,UpdatePaintNodeData*) {
     auto* root=static_cast<SceneNode*>(previous); if (!root) root=new SceneNode(window());
-    if (root->size!=frame_.size || root->dpr!=frame_.dpr) {
+    if (root->dpr!=frame_.dpr) {
         root->clearGlyphs(); root->size=frame_.size; root->dpr=frame_.dpr;
     }
+    root->size=frame_.size;
     if (root->cache.size()>4096) root->clearGlyphs();
     root->tint->setRect(QRectF(QPointF(),frame_.size));
     auto tint=frame_.background; tint.setAlpha(qRound(frame_.backgroundOpacity*255)); root->tint->setColor(tint);

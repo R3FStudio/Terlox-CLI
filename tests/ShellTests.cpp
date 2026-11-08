@@ -7,6 +7,28 @@
 class CoreTests : public QObject {
     Q_OBJECT
 private slots:
+    void scrollbackMemoryBudget() {
+        constexpr size_t budget=4096;
+        terlox::Scrollback history(100000,budget);
+        std::vector<VTermScreenCell> cells(20); cells[0].chars[0]='x'; cells[0].width=1;
+        for (int i=0;i<10000;++i) history.push(int(cells.size()),cells.data());
+        QVERIFY(history.bytes()<=budget); QVERIFY(history.size()>0); QVERIFY(history.size()<10000);
+        const auto before=history.bytes(); QVERIFY(history.pop(int(cells.size()),cells.data())); QVERIFY(history.bytes()<before);
+        history.clear(); QCOMPARE(history.size(),0); QCOMPARE(history.bytes(),size_t(0));
+    }
+    void clearReleasesHistoryAndVisibleText() {
+        terlox::Screen screen(3,20,100);
+        for (int i=0;i<20;++i) screen.feed("retained-secret\r\n");
+        QVERIFY(screen.historySize()>0); screen.clear();
+        QCOMPARE(screen.historySize(),0); QCOMPARE(screen.historyBytes(),size_t(0));
+        for (int row=0;row<screen.rows();++row) QVERIFY(screen.text(row,0,19).isEmpty());
+        screen.feed("still-works"); QCOMPARE(screen.text(0,0,19),QString("still-works"));
+    }
+    void unchangedGridDoesNotReflow() {
+        terlox::Screen screen(4,20); QSignalSpy changed(&screen,&terlox::Screen::changed);
+        screen.resize(4,20); QCOMPARE(changed.size(),0);
+        screen.resize(5,21); QCOMPARE(changed.size(),1);
+    }
 #ifdef Q_OS_WIN
     void elevationRequestPreservesCommand() {
         const QString command="ps Write-Output 'hello \"world\"'; Get-Location";

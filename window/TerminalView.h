@@ -14,6 +14,7 @@ public:
     TerminalView(Screen* screen, const Appearance& appearance, QWidget* parent = nullptr);
     void setAppearance(const Appearance& appearance);
     void copy(); void paste(); void selectAll();
+    void clearTerminal();
     QString selectedText() const;
     Screen* screen() const { return screen_; }
     QString rendererDescription() const;
@@ -66,7 +67,7 @@ private:
     qreal scrollPosition_=0,scrollTarget_=0;
     qint64 lastScrollSerial_=0;
     static constexpr int ScrollGutter=14;
-    QTimer refresh_;
+    QTimer refresh_, gridResize_;
     QString typedCommand_; bool commandTracking_ = true;
     qreal cellWidth_ = 8, cellHeight_ = 16, ascent_ = 12;
     QTimer blink_; bool cursorOn_ = true, textBlinkOn_ = true, dragging_ = false, hasSelection_ = false;

@@ -56,7 +56,13 @@ Appearance Window::displayAppearance() const {
     display.font.setPointSizeF(std::clamp(display.font.pointSizeF()+textZoom_,6.,40.));
     return display;
 }
-void Window::applyAppearance(bool save) { if (save) store_.saveAppearance(appearance_); for (int i = 0; i < tabs_->count(); ++i) static_cast<TerminalView*>(tabs_->widget(i))->setAppearance(displayAppearance()); applySessionSurface(); emit textZoomChanged(displayAppearance().font.pointSizeF(),appearance_.font.pointSizeF()); }
+void Window::applyAppearance(bool save) {
+    if (save) store_.saveAppearance(appearance_);
+    for (int i=0;i<tabs_->count();++i) static_cast<TerminalView*>(tabs_->widget(i))->setAppearance(displayAppearance());
+    // Text-only zoom does not need to recreate native acrylic/vibrancy effects.
+    if (save) applySessionSurface(); else update();
+    emit textZoomChanged(displayAppearance().font.pointSizeF(),appearance_.font.pointSizeF());
+}
 void Window::paintEvent(QPaintEvent*) {
     QPainter p(this); p.setRenderHint(QPainter::Antialiasing);
     const QRectF panel=QRectF(rect());

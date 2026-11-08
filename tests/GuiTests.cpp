@@ -29,12 +29,37 @@
 #endif
 #include <QtTest>
 using namespace terlox;
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
+static constexpr auto clipboardModifiers=Qt::ControlModifier;
+#else
+static constexpr auto clipboardModifiers=Qt::ControlModifier|Qt::ShiftModifier;
+#endif
+#ifdef Q_OS_MACOS
+static constexpr auto terminalControl=Qt::MetaModifier;
+#else
+static constexpr auto terminalControl=Qt::ControlModifier;
+#endif
 class GuiTests : public QObject {
     Q_OBJECT
     QTemporaryDir historyDirectory_;
     QTemporaryDir configDirectory_;
     static QString content(Screen* screen) { QStringList lines; for (int row = 0; row < screen->rows(); ++row) lines << screen->text(row,0,screen->columns()-1); return lines.join('\n'); }
 private slots:
+    void resizeBurstAndFullClear() {
+        Screen screen(10,80,1000); Appearance appearance; TerminalView view(&screen,appearance);
+        connect(&view,&TerminalView::gridChanged,&screen,&Screen::resize);
+        view.resize(640,320); view.show(); QVERIFY(QTest::qWaitForWindowExposed(&view));
+        for (int i=0;i<100;++i) screen.feed("resize-and-history\r\n");
+        QSignalSpy grids(&view,&TerminalView::gridChanged);
+        QElapsedTimer elapsed; elapsed.start();
+        for (int i=0;i<100;++i) view.resize(640+i*2,320+i);
+        QTRY_VERIFY(screen.columns()>80); QVERIFY(elapsed.elapsed()<3000);
+        QVERIFY(grids.size()<10); QVERIFY(content(&screen).contains("resize-and-history"));
+        const auto image=view.grabFramebuffer(); QVERIFY(!image.isNull());
+        QVERIFY(screen.historySize()>0); view.clearTerminal(); QCOMPARE(screen.historySize(),0);
+        QVERIFY(content(&screen).trimmed().isEmpty());
+        QSignalSpy output(&screen,&Screen::output); QTest::keyClicks(&view,"still-interactive"); QVERIFY(!output.isEmpty());
+    }
     void initTestCase() {
         QVERIFY(historyDirectory_.isValid()); QVERIFY(configDirectory_.isValid());
         qputenv("TERLOX_HISTORY_FILE",historyDirectory_.filePath("history").toUtf8());
@@ -293,13 +318,13 @@ private slots:
         QApplication::sendEvent(&view,&wheel);
         QTRY_VERIFY(bar->value()<bar->maximum()); QTest::qWait(170);
         QSignalSpy output(&screen,&Screen::output);
-        QTest::keyClick(&view,Qt::Key_A,Qt::ControlModifier);
+        QTest::keyClick(&view,Qt::Key_A,clipboardModifiers);
         QVERIFY(view.selectedText().contains("line-000")); QVERIFY(view.selectedText().contains("line-099"));
-        QTest::keyClick(&view,Qt::Key_C,Qt::ControlModifier);
+        QTest::keyClick(&view,Qt::Key_C,clipboardModifiers);
         QCOMPARE(QApplication::clipboard()->text(),view.selectedText()); QCOMPARE(output.size(),0);
-        QApplication::clipboard()->setText("paste-proof"); QTest::keyClick(&view,Qt::Key_V,Qt::ControlModifier);
+        QApplication::clipboard()->setText("paste-proof"); QTest::keyClick(&view,Qt::Key_V,clipboardModifiers);
         QVERIFY(output.last().at(0).toByteArray().contains("paste-proof")); QCOMPARE(bar->value(),bar->maximum());
-        output.clear(); QTest::keyClick(&view,Qt::Key_C,Qt::ControlModifier);
+        output.clear(); QTest::keyClick(&view,Qt::Key_C,terminalControl);
         QCOMPARE(output.last().at(0).toByteArray(),QByteArray(1,'\x03'));
         bar->setValue(0); const auto oldHistory=bar->maximum(); screen.feed("later-output\r\n");
         QTRY_VERIFY(bar->maximum()>oldHistory); QCOMPARE(bar->value(),0);
@@ -332,10 +357,10 @@ private slots:
         for (const auto key:{Qt::Key_Backspace,Qt::Key_Delete}) {
             const auto command=QString("echo ")+QString(130,'x');
             QTest::keyClicks(&view,command); QTRY_COMPARE(commandLength(),command.size());
-            QTest::keyClick(&view,Qt::Key_A,Qt::ControlModifier); QVERIFY(view.selectedText().contains('>'));
+            QTest::keyClick(&view,Qt::Key_A,clipboardModifiers); QVERIFY(view.selectedText().contains('>'));
             QTest::keyClick(&view,key); QTRY_COMPARE(content(&screen).trimmed(),prompt); QTRY_COMPARE(commandLength(),0);
             QSignalSpy output(&screen,&Screen::output);
-            QTest::keyClick(&view,Qt::Key_A,Qt::ControlModifier); QTest::keyClick(&view,key);
+            QTest::keyClick(&view,Qt::Key_A,clipboardModifiers); QTest::keyClick(&view,key);
             QCOMPARE(output.size(),0); QCOMPARE(content(&screen).trimmed(),prompt);
         }
         QTest::keyClicks(&view,"echo ABCDEF"); QTRY_COMPARE(commandLength(),11);
@@ -351,7 +376,7 @@ private slots:
         QTRY_COMPARE(commandLength(),8); QTest::keyClick(&view,Qt::Key_Return);
         QTRY_VERIFY_WITH_TIMEOUT(content(&screen).split('\n').contains("ABC"),5000);
         const auto outputBefore=content(&screen);
-        QTest::keyClick(&view,Qt::Key_A,Qt::ControlModifier); QTest::keyClick(&view,Qt::Key_Backspace);
+        QTest::keyClick(&view,Qt::Key_A,clipboardModifiers); QTest::keyClick(&view,Qt::Key_Backspace);
         QCOMPARE(content(&screen),outputBefore);
         QTest::keyClicks(&view,"echo still-editable"); QTest::keyClick(&view,Qt::Key_Return);
         QTRY_VERIFY_WITH_TIMEOUT(content(&screen).split('\n').contains("still-editable"),5000);
@@ -555,7 +580,7 @@ private slots:
         QTRY_COMPARE(Store().appearance().blur,.85);
         QTRY_VERIFY(content(view->screen()).contains("Updated blur"));
         QTRY_VERIFY_WITH_TIMEOUT(ready(),10000);
-        QTest::keyClicks(view,"discard-input"); QTest::keyClick(view,Qt::Key_U,Qt::ControlModifier);
+        QTest::keyClicks(view,"discard-input"); QTest::keyClick(view,Qt::Key_U,terminalControl);
         QTRY_VERIFY_WITH_TIMEOUT(ready(),10000);
         QTest::keyClicks(view,"/terlox opacity 0.5"); QTest::keyClick(view,Qt::Key_Return);
         QTRY_COMPARE(Store().appearance().opacity,.5);

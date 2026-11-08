@@ -13,7 +13,9 @@ another session starts another shell.
 | `cd` | `cd "path with spaces"` | Change folders; `cd ..` goes up a level and `cd ~` goes home |
 | `pwd` | `pwd` | Print the current folder |
 | `echo` | `echo hello` | Print text and expanded variables |
-| `clear` | `clear` | Clear the visible screen |
+| `clear` | `clear` | Clear the visible screen and retained scrollback |
+| `fastfetch` / `fetch` / `sysinfo` | `fastfetch` | Built-in Terlox system report, without an external download |
+| `version` | `version` | Version, system and buffer-limit statistics |
 | `exit` | `exit` or `exit 0` | Leave the shell, optionally with an exit status |
 | `export` | `export PROJECT=Terlox` | Set an environment variable for this session and its child programs |
 | `set` | `set PROJECT=Terlox` | The same assignment form as `export` in this shell |
@@ -96,7 +98,7 @@ empty prompt leaves the shell.
 Ctrl+U clears the command being edited.
 
 Select command text with the mouse and press Backspace or Delete to remove it.
-Ctrl+A followed by either key clears the current command. The directory prompt
+Select all followed by either key clears the current command. The directory prompt
 and previous output remain unchanged even when they are included in the selection.
 
 The terminal owns its select/copy/paste shortcuts. **Ctrl+Alt+A/C/V** sends the

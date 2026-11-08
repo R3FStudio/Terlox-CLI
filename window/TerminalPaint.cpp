@@ -11,9 +11,11 @@ void TerminalView::refreshScene() {
         if (row*cellHeight_+shift+extent.height()<0 || row*cellHeight_+shift>height()) continue;
         frame.graphics.append({image.image,QRectF(QPointF(image.cell.x()*cellWidth_,row*cellHeight_+shift),extent)});
     }
-    frame.glyphs.reserve(screen_->rows()*screen_->columns()/3);
-    for (int row = 0; row < screen_->rows()+(shift<0?1:0); ++row) {
-        for (int col = 0; col < screen_->columns(); ++col) {
+    const auto rows=std::min(screen_->rows()+(shift<0?1:0),int(height()/cellHeight_)+2);
+    const auto columns=std::min(screen_->columns(),int(width()/cellWidth_)+1);
+    frame.glyphs.reserve(rows*columns/3);
+    for (int row = 0; row < rows; ++row) {
+        for (int col = 0; col < columns; ++col) {
             const auto c = screen_->cell(row, col, offset_); if (!c.width || c.chars[0] == 0xffffffff) continue;
             const QRectF rect(col * cellWidth_, row * cellHeight_+shift, cellWidth_ * std::max(1, int(c.width)), cellHeight_);
             QColor fg = screen_->color(c.fg), bg = screen_->color(c.bg);

@@ -18,6 +18,31 @@ class NativeShellTests : public QObject {
 #endif
     }
 private slots:
+    void headlessVersionAndClear() {
+#ifdef Q_OS_MACOS
+        const auto app=QCoreApplication::applicationDirPath()+"/terlox.app/Contents/MacOS/terlox";
+#elif defined(Q_OS_WIN)
+        const auto app=QCoreApplication::applicationDirPath()+"/terlox.exe";
+#else
+        const auto app=QCoreApplication::applicationDirPath()+"/terlox";
+#endif
+        auto environment=QProcessEnvironment::systemEnvironment(); environment.insert("QT_QPA_PLATFORM","not-a-real-platform");
+        QProcess version; version.setProcessEnvironment(environment); version.start(app,{"--version"});
+        QVERIFY(version.waitForFinished(10000)); QCOMPARE(version.exitCode(),0);
+        const auto report=version.readAllStandardOutput(); QVERIFY(report.contains(TERLOX_VERSION)); QVERIFY(report.contains("Qt:"));
+        QProcess clear; clear.setProcessEnvironment(environment); clear.start(app,{"clear"});
+        QVERIFY(clear.waitForFinished(10000)); QCOMPARE(clear.exitCode(),0);
+        QCOMPARE(clear.readAllStandardOutput(),QByteArray("\033[3J\033[2J\033[H"));
+    }
+    void builtInFetchWithoutExternalTool() {
+        for (const auto& command:QStringList{"fastfetch","fetch","sysinfo","version"}) {
+            QProcess p; p.start(shell(),{"-c",command}); QVERIFY(p.waitForFinished(10000));
+            QCOMPARE(p.exitCode(),0); const auto text=p.readAllStandardOutput();
+            QVERIFY(text.contains(TERLOX_VERSION)); QVERIFY(text.contains("OS:")); QVERIFY(text.contains("CPU:"));
+        }
+        QProcess clear; clear.start(shell(),{"-c","clear"}); QVERIFY(clear.waitForFinished());
+        QCOMPARE(clear.readAllStandardOutput(),QByteArray("\033[3J\033[2J\033[H"));
+    }
 #ifndef Q_OS_WIN
     void sourceExplainsNativeShell_data() {
         QTest::addColumn<QString>("command");

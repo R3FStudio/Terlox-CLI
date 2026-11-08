@@ -89,3 +89,14 @@ Press **F1**, type **About Terlox**, or type **/info-terlox**. The in-terminal
 page shows shortcuts, version, current session and system information.
 Use **1–4** or **Tab** to switch pages, arrows to scroll, and **Q** or **Esc** to
 return to your session.
+
+## Version, system report and clearing
+
+`terlox --version` prints version and system/build statistics without opening a
+window. In `terloxsh`, `fastfetch`, `fetch`, `sysinfo` and `version` provide the
+built-in report. This is Terlox's own fetch-style output; upstream Fastfetch
+options require an external Fastfetch installation.
+
+`terlox clear` clears visible text and scrollback in the current terminal. In
+Terlox you can also use `/terlox clear` or the **Clear terminal** menu action.
+Other sessions and saved files are unaffected.

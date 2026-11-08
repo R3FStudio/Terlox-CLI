@@ -1,10 +1,22 @@
 #include "Screen.h"
 namespace terlox {
 void Screen::key(QKeyEvent* e) {
-    if (e->key()==Qt::Key_Return || e->key()==Qt::Key_Enter || ((e->key()==Qt::Key_C || e->key()==Qt::Key_U) && e->modifiers().testFlag(Qt::ControlModifier))) editableInput_.clear();
+#ifdef Q_OS_MACOS
+    const auto physicalControl=Qt::MetaModifier;
+#else
+    const auto physicalControl=Qt::ControlModifier;
+#endif
+    if (e->key()==Qt::Key_Return || e->key()==Qt::Key_Enter || ((e->key()==Qt::Key_C || e->key()==Qt::Key_U) && e->modifiers().testFlag(physicalControl))) editableInput_.clear();
     int mods = VTERM_MOD_NONE;
     if (e->modifiers() & Qt::ShiftModifier) mods |= VTERM_MOD_SHIFT;
+#ifdef Q_OS_MACOS
+    // Qt maps Command to ControlModifier and the physical Control key to Meta.
+    // Clipboard Command shortcuts are handled by the view, never sent as ^C.
+    if (e->modifiers() & Qt::MetaModifier) mods |= VTERM_MOD_CTRL;
+    else if (e->modifiers() & Qt::ControlModifier) return;
+#else
     if (e->modifiers() & Qt::ControlModifier) mods |= VTERM_MOD_CTRL;
+#endif
     if (e->modifiers() & Qt::AltModifier) mods |= VTERM_MOD_ALT;
     VTermKey key = VTERM_KEY_NONE;
     switch (e->key()) {

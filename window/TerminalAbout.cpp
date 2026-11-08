@@ -19,7 +19,12 @@ void TerminalView::renderAbout() { if (aboutScreen_) aboutScreen_->feed(aboutPag
 bool TerminalView::aboutKey(QKeyEvent* event) {
     if (!aboutScreen_) return false;
     const int key=event->key();
-    if (key==Qt::Key_Escape || key==Qt::Key_Q || key==Qt::Key_F1 || (key==Qt::Key_C && event->modifiers()==Qt::ControlModifier)) { closeAbout(); return true; }
+#ifdef Q_OS_MACOS
+    const auto control=Qt::MetaModifier;
+#else
+    const auto control=Qt::ControlModifier;
+#endif
+    if (key==Qt::Key_Escape || key==Qt::Key_Q || key==Qt::Key_F1 || (key==Qt::Key_C && event->modifiers()==control)) { closeAbout(); return true; }
     if (key==Qt::Key_C && event->modifiers()==(Qt::ControlModifier|Qt::ShiftModifier)) return false;
     if (key>=Qt::Key_1 && key<=Qt::Key_4) { aboutPage_=key-Qt::Key_1; aboutScroll_=0; }
     else if (key==Qt::Key_Tab || key==Qt::Key_Right) { aboutPage_=(aboutPage_+1)%4; aboutScroll_=0; }

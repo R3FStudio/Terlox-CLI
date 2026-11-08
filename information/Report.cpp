@@ -29,8 +29,14 @@ QString informationReport(const ReportContext& c) {
 #endif
         text += keys.leftJustified(24) + s.description + "\n";
     }
-    text += "Ctrl+A                 Select all retained terminal text\n";
-    text += "Ctrl+C / Ctrl+V        Copy selection / paste; Ctrl+C interrupts if nothing selected\n";
+#ifdef Q_OS_MACOS
+    text += "Cmd+A / Cmd+C / Cmd+V  Select all, copy and paste; Control+C interrupts\n";
+#elif defined(Q_OS_WIN)
+    text += "Ctrl+A / Ctrl+C / Ctrl+V  Select all, copy selection and paste\n";
+#else
+    text += "Ctrl+Shift+A/C/V       Select all, copy and paste; Ctrl+C interrupts\n";
+    text += "Ctrl+Insert / Shift+Insert  Copy / paste\n";
+#endif
     text += "Ctrl+Alt+A/C/V         Send raw Ctrl+A/C/V to a CLI application\n";
     text += "Ctrl+wheel / Shift +/-  Temporary text zoom (6-40 pt; resets on close)\n";
     text += "Shift+PageUp/PageDown    Scroll terminal history\n";
@@ -41,13 +47,14 @@ QString informationReport(const ReportContext& c) {
     text += "Window edges/corners   Resize window\nRight-click            Animated session / window menu\n";
     text += "\nCOMMANDS AND SCRIPTS\n";
     text += "About Terlox            Interactive in-terminal About app (1-4 pages, Q exits)\n/info-terlox            Opens the same app; standalone prints this report\n";
+    text += "terlox --version        Version, build and system statistics (no GUI needed)\nterlox clear            Clear visible text and scrollback\n";
     text += "terloxsh -c 'command'   Run a command without the GUI\nterloxsh file.tlx       Run a line-based Terlox script\n";
     text += "terloxctl default-terminal set/status/restore  Manage this account's OS terminal preference\n";
     text += "terlox-default [set|status|restore]  Same actions inside terloxsh\n";
     text += "terlox-update [check]    Check the latest public stable release\n";
     text += "terloxctl update        Same update check from any shell\n";
     text += "terlox --set-default-terminal  GUI executable command-line equivalent\n";
-    text += "Builtins: cd, pwd, echo, clear, exit, export/set, unset, env, history\n";
+    text += "Builtins: cd, pwd, echo, clear, exit, export/set, unset, env, history, fastfetch, fetch, sysinfo, version\n";
     text += "Quotes: single literal, double expanded; $NAME, ${NAME}, $?\nPipes: a | b; redirection: <, >, >>, 2>; statements: ;\n";
     text += "Editor: arrows/history, Tab completion, Home/End, Ctrl+A/E/L, Ctrl+C/D\n";
     text += "\nWINDOWS\n";

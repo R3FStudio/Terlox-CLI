@@ -1,6 +1,7 @@
 #include "Builtins.h"
 #include "Help.h"
 #include "information/Report.h"
+#include "information/System.h"
 #include "integration/defaults/Command.h"
 #include "updates/Command.h"
 #include <QCoreApplication>
@@ -20,10 +21,14 @@ bool isBuiltin(const QString& n) {
 #ifndef Q_OS_WIN
     if (n=="." || n=="source") return true;
 #endif
-    return QStringList{"cd","pwd","echo","clear","exit","export","set","unset","env","history","help","/info-terlox","terlox-default","terlox-update"}.contains(builtinName(n));
+    return QStringList{"cd","pwd","echo","clear","exit","export","set","unset","env","history","help","/info-terlox","terlox-default","terlox-update","fastfetch","fetch","sysinfo","version"}.contains(builtinName(n));
 }
 int builtin(const QStringList& a, ShellState& state) {
     const auto n = builtinName(a[0]);
+    if (n=="fastfetch" || n=="fetch" || n=="sysinfo" || n=="version") {
+        if (a.size()>1) { std::cerr << "terloxsh: built-in system report takes no arguments (install upstream Fastfetch for its options).\n"; return 2; }
+        std::cout << systemSummary().toUtf8().constData(); return 0;
+    }
 #ifndef Q_OS_WIN
     if (n=="." || n=="source") {
         std::cerr << "terloxsh: " << n.toStdString() << ": shell scripts and functions need a native shell.\n"
@@ -68,7 +73,7 @@ int builtin(const QStringList& a, ShellState& state) {
     }
     if (n == "pwd") { std::cout << QDir::currentPath().toUtf8().constData() << '\n'; return 0; }
     if (n == "echo") { std::cout << a.mid(1).join(' ').toUtf8().constData() << '\n'; return 0; }
-    if (n == "clear") { std::cout << "\033[2J\033[H"; return 0; }
+    if (n == "clear") { std::cout << "\033[3J\033[2J\033[H"; return 0; }
     if (n == "exit") {
         bool valid = true; const int code = a.size() > 1 ? a[1].toInt(&valid) : state.status;
         if (!valid || a.size() > 2) return error("exit: expected one numeric status");

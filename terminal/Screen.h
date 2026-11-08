@@ -19,6 +19,8 @@ public:
     Screen& operator=(const Screen&) = delete;
     void feed(const QByteArray& bytes);
     void resize(int rows, int columns);
+    void clear();
+    size_t historyBytes() const { return history_.bytes(); }
     void key(QKeyEvent* event);
     void paste(const QString& text);
     VTermScreenCell cell(int row, int column, int offset = 0) const;

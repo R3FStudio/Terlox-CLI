@@ -63,7 +63,7 @@ bool Process::start(const LaunchOptions& o, QString& error) {
             if (fds[0].revents & POLLOUT) { const auto n = ::write(d->master, outgoing.constData(), outgoing.size()); if (n > 0) outgoing.remove(0, n); }
             if (fds[0].revents & (POLLIN | POLLHUP)) {
                 char b[32768]; ssize_t n;
-                while ((n = ::read(d->master, b, sizeof(b))) > 0) { const QByteArray bytes(b, n); QMetaObject::invokeMethod(this, [this, bytes] { emit received(bytes); }); }
+                while ((n = ::read(d->master, b, sizeof(b))) > 0) { if (!queueOutput(QByteArray(b,n))) return; }
                 if (n == 0 || (n < 0 && errno == EIO)) break;
             }
             if (d->ended && !(fds[0].revents & POLLIN)) break;
@@ -75,13 +75,14 @@ bool Process::start(const LaunchOptions& o, QString& error) {
         kill(-d->child, SIGHUP); d->ended = true; const char wake = 0; ::write(d->wake[1], &wake, 1);
         const int code = waited<0 ? 125 : WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
         if (d->io.joinable()) d->io.join();
-        QMetaObject::invokeMethod(this, [this, code] { emit exited(code); });
+        finishOutput(code);
     });
     return true;
 }
 void Process::write(const QByteArray& bytes) { if (d->stopping || d->ended) return; { std::lock_guard lock(d->mutex); d->pending.push_back(bytes); } const char wake = 0; ::write(d->wake[1], &wake, 1); }
 void Process::resize(int rows, int columns) { if (d->master >= 0) { winsize s{}; s.ws_row = rows; s.ws_col = columns; ioctl(d->master, TIOCSWINSZ, &s); } }
 void Process::stop() {
+    stopOutput();
     d->stopping = true;
     if (d->child > 0 && !d->ended) kill(-d->child, SIGKILL);
     if (d->wake[1] >= 0) { const char wake = 0; ::write(d->wake[1], &wake, 1); }
