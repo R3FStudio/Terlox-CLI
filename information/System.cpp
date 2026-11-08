@@ -35,7 +35,7 @@ QString systemSummary() {
     if (disk.isValid() && disk.bytesTotal()>0)
         text+=QString("Root disk: %1 / %2 GiB available\n").arg(double(disk.bytesAvailable())/(1024.*1024*1024),0,'f',1).arg(double(disk.bytesTotal())/(1024.*1024*1024),0,'f',1);
     text+=QString("Qt: %1 (built with %2)\nBuild: %3\n").arg(qVersion(),QT_VERSION_STR,QSysInfo::buildCpuArchitecture());
-    text+="Scrollback: up to configured line limit and 32 MiB per session; oldest lines evicted\n";
+    text+="Scrollback: 32 MiB RAM cache per session; older text reloads from temporary disk storage\n";
     text+="Output queue: 1 MiB per session with producer backpressure\n";
     text+="Renderer: live device and session details are in F1 > System\n";
     return text;

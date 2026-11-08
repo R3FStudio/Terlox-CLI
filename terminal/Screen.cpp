@@ -3,6 +3,7 @@
 namespace terlox {
 Screen::Screen(int rows, int columns, int scrollback, QObject* parent)
     : QObject(parent), vt_(vterm_new(rows, columns)), screen_(vterm_obtain_screen(vt_)), history_(scrollback), rows_(rows), columns_(columns) {
+    history_.setErrorHandler([this](const QString& message) { emit historyStorageError(message); });
     vterm_set_utf8(vt_, 1); vterm_screen_enable_altscreen(screen_, 1);
     vterm_screen_set_damage_merge(screen_, VTERM_DAMAGE_SCREEN);
     static const VTermScreenCallbacks callbacks = {
@@ -56,7 +57,10 @@ VTermScreenCell Screen::cell(int row, int col, int offset) const {
     const int effective = row - (alternate_ ? 0 : offset);
     if (effective < 0) {
         const int index = history_.size() + effective;
-        if (index >= 0 && index < history_.size() && col < int(history_.line(index).size())) return history_.line(index)[col];
+        if (index >= 0 && index < history_.size()) {
+            const auto& line=history_.line(index);
+            if (col<int(line.size())) return line[col];
+        }
         return c;
     }
     if (effective < rows_) vterm_screen_get_cell(screen_, {effective, col}, &c);

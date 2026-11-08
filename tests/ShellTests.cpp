@@ -9,12 +9,42 @@ class CoreTests : public QObject {
 private slots:
     void scrollbackMemoryBudget() {
         constexpr size_t budget=4096;
-        terlox::Scrollback history(100000,budget);
-        std::vector<VTermScreenCell> cells(20); cells[0].chars[0]='x'; cells[0].width=1;
-        for (int i=0;i<10000;++i) history.push(int(cells.size()),cells.data());
-        QVERIFY(history.bytes()<=budget); QVERIFY(history.size()>0); QVERIFY(history.size()<10000);
-        const auto before=history.bytes(); QVERIFY(history.pop(int(cells.size()),cells.data())); QVERIFY(history.bytes()<before);
-        history.clear(); QCOMPARE(history.size(),0); QCOMPARE(history.bytes(),size_t(0));
+        terlox::Scrollback history(2,budget);
+        std::vector<VTermScreenCell> cells(20); cells[0].width=1;
+        for (int i=0;i<10000;++i) {
+            cells[0].chars[0]='A'+i%26; cells[0].chars[1]=0x1000+i;
+            cells[0].attrs.bold=i%2; vterm_color_rgb(&cells[0].fg,i%255,42,99);
+            QVERIFY(history.push(int(cells.size()),cells.data()));
+        }
+        QVERIFY(history.bytes()<=budget); QCOMPARE(history.size(),10000); QVERIFY(history.diskBytes()>0);
+        for (const int row:{0,1,4000,9997,9999,0}) {
+            const auto& restored=history.line(row);
+            QCOMPARE(restored.size(),size_t(20)); QCOMPARE(restored[0].chars[0],uint32_t('A'+row%26));
+            QCOMPARE(restored[0].chars[1],uint32_t(0x1000+row)); QCOMPARE(restored[0].attrs.bold,unsigned(row%2));
+            QCOMPARE(restored[0].fg.rgb.green,uint8_t(42)); QVERIFY(history.bytes()<=budget);
+        }
+        for (int row=9999;row>=0;--row) {
+            QVERIFY(history.pop(int(cells.size()),cells.data()));
+            QCOMPARE(cells[0].chars[1],uint32_t(0x1000+row));
+        }
+        QCOMPARE(history.size(),0); QCOMPARE(history.diskBytes(),qint64(0));
+        history.clear(); QCOMPARE(history.bytes(),size_t(0)); QVERIFY(history.error().isEmpty());
+        QVERIFY(history.push(int(cells.size()),cells.data())); QCOMPARE(history.size(),1);
+    }
+    void archivedHistorySurvivesResizeAndNewOutput() {
+        terlox::Screen screen(3,40,2);
+        for (int i=0;i<200;++i) screen.feed(QString("history-%1\r\n").arg(i,3,10,QChar('0')).toUtf8());
+        QVERIFY(screen.historySize()>2); QVERIFY(screen.historyDiskBytes()>0);
+        QCOMPARE(screen.text(0,0,39,screen.historySize()),QString("history-000"));
+        screen.resize(6,40); screen.resize(3,40);
+        screen.feed("latest-output\r\n");
+        QCOMPARE(screen.text(0,0,39,screen.historySize()),QString("history-000"));
+        screen.clear(); QCOMPARE(screen.historySize(),0); QCOMPARE(screen.historyDiskBytes(),qint64(0));
+    }
+    void disabledScrollbackDoesNotWriteToDisk() {
+        terlox::Scrollback history(0); VTermScreenCell cell{};
+        for (int i=0;i<20;++i) QVERIFY(history.push(1,&cell));
+        QCOMPARE(history.size(),0); QCOMPARE(history.diskBytes(),qint64(0));
     }
     void clearReleasesHistoryAndVisibleText() {
         terlox::Screen screen(3,20,100);
@@ -101,7 +131,7 @@ private slots:
     void alternate() { terlox::Screen s(3,10); s.feed("main\033[?1049h\033[Hother"); QVERIFY(s.alternate()); s.feed("\033[?1049l"); QVERIFY(!s.alternate()); QCOMPARE(s.text(0,0,3), "main"); }
     void unicode() { terlox::Screen s(3,10); s.feed(QString::fromUtf8("e\u0301界").toUtf8()); QCOMPARE(s.cell(0,0).chars[1], uint32_t(0x301)); QCOMPARE(s.cell(0,1).width, char(2)); }
     void trueColorAndVisibility() { terlox::Screen s(3,10); s.feed("X"); QCOMPARE(s.color(s.cell(0,0).fg),QColor(Qt::white)); s.feed("\r\033[38;2;20;40;60mX\033[?25l"); QCOMPARE(s.color(s.cell(0,0).fg),QColor(20,40,60)); QVERIFY(!s.cursorVisible()); s.feed("\033[?25h"); QVERIFY(s.cursorVisible()); }
-    void scrollAndResize() { terlox::Screen s(2,10,3); for (int i=0;i<8;++i) s.feed("line\r\n"); QCOMPARE(s.historySize(),3); QCOMPARE(s.text(0,0,3,1),"line"); s.resize(4,20); QCOMPARE(s.rows(),4); QCOMPARE(s.columns(),20); }
+    void scrollAndResize() { terlox::Screen s(2,10,3); for (int i=0;i<8;++i) s.feed("line\r\n"); QVERIFY(s.historySize()>3); QVERIFY(s.historyDiskBytes()>0); QCOMPARE(s.text(0,0,3,1),"line"); s.resize(4,20); QCOMPARE(s.rows(),4); QCOMPARE(s.columns(),20); }
     void fragmentedUtf8AndEscapes() { terlox::Screen s(3,10); s.feed(QByteArray::fromHex("e7")); s.feed(QByteArray::fromHex("958c")); QCOMPARE(s.cell(0,0).width,char(2)); s.feed("\033["); s.feed("2;4H!"); QCOMPARE(s.text(1,3,3),"!"); }
 };
 QTEST_GUILESS_MAIN(CoreTests)

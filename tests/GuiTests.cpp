@@ -45,6 +45,20 @@ class GuiTests : public QObject {
     QTemporaryDir configDirectory_;
     static QString content(Screen* screen) { QStringList lines; for (int row = 0; row < screen->rows(); ++row) lines << screen->text(row,0,screen->columns()-1); return lines.join('\n'); }
 private slots:
+    void scrollbarReloadsArchivedText() {
+        Screen screen(5,70,2); Appearance appearance; TerminalView view(&screen,appearance);
+        view.resize(640,200); view.show(); QVERIFY(QTest::qWaitForWindowExposed(&view));
+        for (int i=0;i<250;++i) screen.feed(QString("disk-history-%1\r\n").arg(i,3,10,QChar('0')).toUtf8());
+        auto* bar=view.findChild<QScrollBar*>("terminalScrollBar"); QVERIFY(bar);
+        QTRY_COMPARE(bar->maximum(),screen.historySize()); QVERIFY(screen.historyDiskBytes()>0);
+        bar->setValue(0); view.selectAll();
+        QVERIFY(view.selectedText().contains("disk-history-000"));
+        QVERIFY(view.selectedText().contains("disk-history-249"));
+        bar->setValue(bar->maximum()); bar->setValue(0);
+        QCOMPARE(screen.text(0,0,69,screen.historySize()),QString("disk-history-000"));
+        QVERIFY(!view.grabFramebuffer().isNull());
+        view.clearTerminal(); QCOMPARE(screen.historyDiskBytes(),qint64(0));
+    }
     void resizeBurstAndFullClear() {
         Screen screen(10,80,1000); Appearance appearance; TerminalView view(&screen,appearance);
         connect(&view,&TerminalView::gridChanged,&screen,&Screen::resize);

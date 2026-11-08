@@ -9,6 +9,7 @@
 #include <QPainterPath>
 #include <QMouseEvent>
 #include <QWindow>
+#include <QMessageBox>
 namespace terlox {
 Window::Window(const QString& preferred, QWidget* parent, const Profile* initialProfile) : QWidget(parent), appearance_(store_.appearance()), profiles_(store_.profiles(QApplication::applicationDirPath())), tabs_(new QTabWidget(this)) {
     setWindowTitle("Terlox"); setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::WindowSystemMenuHint | Qt::WindowMinimizeButtonHint); setAttribute(Qt::WA_TranslucentBackground);
@@ -38,6 +39,10 @@ void Window::newSession(const Profile& profile) {
     connect(view, &TerminalView::menuRequested, this, &Window::showMenu);
     connect(view,&TerminalView::informationRequested,this,&Window::showInformation);
     connect(view,&TerminalView::applicationCommandRequested,this,&Window::executeApplicationCommand);
+    connect(&session->screen(),&Screen::historyStorageError,this,[this](const QString& message) {
+        auto* notice=new QMessageBox(QMessageBox::Warning,"Terlox scrollback",message,QMessageBox::Ok,this);
+        notice->setAttribute(Qt::WA_DeleteOnClose); notice->open();
+    },Qt::QueuedConnection);
     view->setProperty("profileName",profile.name); view->setProperty("profileExecutable",profile.launch.executable); view->setProperty("profileDirectory",profile.launch.directory);
     view->setProperty("profileArguments",profile.launch.arguments);
     connect(session, &Session::finished, view, [this, view](int code) { const auto index = tabs_->indexOf(view); if (index >= 0) tabs_->setTabText(index, tabs_->tabText(index) + QString(" [%1]").arg(code)); });

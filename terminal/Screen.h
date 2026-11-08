@@ -21,6 +21,7 @@ public:
     void resize(int rows, int columns);
     void clear();
     size_t historyBytes() const { return history_.bytes(); }
+    qint64 historyDiskBytes() const { return history_.diskBytes(); }
     void key(QKeyEvent* event);
     void paste(const QString& text);
     VTermScreenCell cell(int row, int column, int offset = 0) const;
@@ -49,6 +50,7 @@ signals:
     void changed();
     void output(const QByteArray& bytes);
     void titleChanged(const QString& title);
+    void historyStorageError(const QString& message);
     void applicationControls(const QJsonObject& controls);
 private:
     VTerm* vt_; VTermScreen* screen_; Scrollback history_;

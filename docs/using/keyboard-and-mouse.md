@@ -60,8 +60,13 @@ the window closes.
 Scroll the wheel or use the slim right scrollbar to revisit output. It appears
 when there is retained history and stays hidden in alternate-screen programs.
 **Shift+PageUp / PageDown** moves a page through history. Typing returns to live
-output. Scrollback is limited by your configured history size and a 32 MiB cell-storage
-budget per session. The oldest lines are discarded when either limit is reached.
+output. Scrollback uses a 32 MiB RAM cache per session. Older lines are compressed
+into private temporary files and loaded again when you scroll up. The configured
+scrollback line count limits cached rows in RAM; it does not discard older history.
+Setting it to zero explicitly disables scrollback. Disk usage grows with retained
+output. The temporary history is removed when you clear or close the session.
+A storage failure produces a warning; additional history cannot be guaranteed
+if temporary-disk space is exhausted.
 Use `terlox clear` or **Clear terminal** in the context menu to clear the display
 and retained history for the current session.
 

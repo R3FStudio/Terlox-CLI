@@ -100,3 +100,11 @@ options require an external Fastfetch installation.
 `terlox clear` clears visible text and scrollback in the current terminal. In
 Terlox you can also use `/terlox clear` or the **Clear terminal** menu action.
 Other sessions and saved files are unaffected.
+
+## Long-session scrollback
+
+Older text is moved from the bounded RAM cache into compressed temporary storage.
+Scrolling back loads those lines on demand, including text older than the
+configured in-memory line count. History belongs to the current session and is
+removed by `terlox clear` or when that session closes. It is not a permanent log;
+redirect output to a file when you need it after closing the terminal.
