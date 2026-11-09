@@ -37,6 +37,11 @@ Keep only the package you want to install in that folder before running the
 command. APT installs the app and adds its launcher to your application menu.
 Install a newer `.deb` the same way when updating.
 
+To select Terlox as Debian’s default terminal, follow the
+[Debian / Ubuntu setup](../using/default-terminal.md#debian--ubuntu-deb-installation).
+That setup configures both the per-user launcher preference and Debian’s
+`x-terminal-emulator` alternative.
+
 For a portable copy, download the AppImage. In its file properties, allow it to
 run as a program, then open it. You can also mark the downloaded file executable
 with `chmod +x` in a shell. Keep it in a permanent folder if you plan to use it
@@ -61,8 +66,8 @@ terloxctl default-terminal status
 terloxctl default-terminal restore
 ```
 
-`set` selects Terlox, `status` checks the selection, and `restore` returns to
-your previous choice. In Terlox's own shell, `terlox-default` offers the same
+`set` selects Terlox for the supported platform preference, `status` checks
+that preference, and `restore` returns to your previous choice. In Terlox's own shell, `terlox-default` offers the same
 actions.
 
 Each desktop handles default terminals differently. See

@@ -7,7 +7,8 @@ the shell you use inside it.
 
 ## Commands
 
-The installed command works from PowerShell, CMD and Unix shells:
+Run these ordinary commands from PowerShell, CMD or a Unix shell such as Bash,
+including a shell running inside Terlox:
 
 ```sh
 terloxctl default-terminal set
@@ -62,15 +63,47 @@ For an AppImage, you can rename the downloaded file to `Terlox.AppImage`, then r
 The preference uses the AppImage's saved location. Run the command again if you
 move the AppImage.
 
-Debian's system-wide `x-terminal-emulator` alternative is separate. An
-administrator can register Terlox and select that alternative explicitly:
+### Debian / Ubuntu (.deb installation)
+
+On Debian and Ubuntu, the `x-terminal-emulator` system alternative is a separate
+setting from the per-user `xdg-terminal-exec` preference. To configure both after
+installing the Terlox `.deb`, run:
 
 ```sh
-sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator /usr/bin/terlox 40
+terloxctl default-terminal set
+sudo apt install xdg-terminal-exec
+sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator /usr/bin/terlox 50
+sudo update-alternatives --set x-terminal-emulator /usr/bin/terlox
+```
+
+Run each command on its own line. The alternative commands use the `.deb`'s
+installed `/usr/bin/terlox` launcher and change the system-wide selection.
+
+If `set` prints **“Terlox preference saved. Install xdg-terminal-exec for
+applications that use it”**, the preference was saved successfully. Install the
+launcher and configure the separate Debian alternative using the remaining
+commands above. Applications with their own terminal setting may still need a
+separate choice.
+
+Test Debian's selection with:
+
+```sh
+x-terminal-emulator
+```
+
+It should open Terlox. **Terminal emulator** is the standard name for a terminal
+application; it does not mean emulating another operating system.
+`x-terminal-emulator` is Debian's generic launcher for the selected terminal app.
+
+To choose another system terminal later, run:
+
+```sh
 sudo update-alternatives --config x-terminal-emulator
 ```
 
-The per-user command never runs sudo or changes system alternatives implicitly.
+`terloxctl default-terminal restore` restores the per-user launcher preference;
+it does not undo a system alternative selected with `sudo`. The per-user command
+never runs sudo or changes system alternatives implicitly.
 
 ## macOS
 
